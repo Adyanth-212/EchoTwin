@@ -139,7 +139,7 @@ AR overlay (WebXR) is in scope but lowest priority — cut first if time runs sh
 |---|---|
 | Akshay — Hardware/Embedded | ESP32 wiring, firmware (all 5 sensors → MQTT), physical mounting/calibration at venue |
 | Aditya — Backend/Data | Docker stack (his Mac is Laptop 3/server), MQTT + REST ingestion, fusion logic, anomaly model integration, the generic Tailscale-call utility (2.5s timeout + fallback) used by both the suggestion engine and the chat panel |
-| You — Frontend/CV | YOLOv8 pipeline (both camera feeds), Three.js dashboard, AR overlay, chat panel UI, and everything on the Ollama side of the Tailscale link: running Ollama on the home PC, model choice, verifying reachability from a hotspot, and turning a chat question into context sent to the LLM |
+| Adyanth — Frontend/CV | YOLOv8 pipeline (both camera feeds), Three.js dashboard, AR overlay, chat panel UI, and everything on the Ollama side of the Tailscale link: running Ollama on the home PC, model choice, verifying reachability from a hotspot, and turning a chat question into context sent to the LLM |
 
 ---
 
