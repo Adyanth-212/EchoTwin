@@ -17,9 +17,15 @@ esp32-firmware/
 ├── platformio.ini
 ├── i2c_scanner/
 │   └── i2c_scanner.ino
-└── sensor_node/
-    └── sensor_node.ino
+├── sensor_node/
+│   └── sensor_node.ino
+└── src/
+    ├── i2c_scanner.cpp
+    └── sensor_node.cpp
 ```
+
+The two files under `src/` are minimal PlatformIO entry points that include
+the canonical Arduino sketches. Do not duplicate implementation code in them.
 
 `i2c_scanner.ino` scans once at boot and explicitly reports each expected
 device as present or missing. `sensor_node.ino` initializes every sensor,
