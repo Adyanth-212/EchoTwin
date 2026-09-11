@@ -69,10 +69,10 @@ backend is up.
 
 ## esp32-firmware/ (owner: Akshay)
 
-Not written yet — see [`esp32-firmware/README.md`](esp32-firmware/README.md)
-for the sensor list, pinout, and I2C addresses. Will be an
-Arduino/PlatformIO project; install
-[PlatformIO](https://platformio.org/install) when firmware work starts.
+Arduino/PlatformIO firmware with a first-boot I2C scanner and the complete
+sensor-to-MQTT node. See
+[`esp32-firmware/README.md`](esp32-firmware/README.md) for required libraries,
+wiring, configuration, and the venue test sequence.
 
 ## ml/
 
