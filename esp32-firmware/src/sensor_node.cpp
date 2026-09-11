@@ -1,4 +1,5 @@
 // PlatformIO build entry point. The Arduino IDE sketch remains canonical.
+#include <Arduino.h>
 #include <WiFi.h>
 #include <Wire.h>
 
