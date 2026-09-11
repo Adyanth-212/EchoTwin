@@ -1,0 +1,31 @@
+# Node
+node_modules/
+frontend/dist/
+frontend/build/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ML model artifacts
+*.pt
+
+# Environment
+.env
+
+# OS
+.DS_Store
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Editor
+.vscode/
+.idea/
+
+# PlatformIO
+esp32-firmware/.pio/
