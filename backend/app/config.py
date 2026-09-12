@@ -19,5 +19,5 @@ TAILSCALE_OLLAMA_URL = os.environ.get("TAILSCALE_OLLAMA_URL", "")
 # Fixed node_id -> room_id mapping. One sensor node per room in the
 # current hackathon build. Add entries here as more nodes come online.
 NODE_ID_TO_ROOM_ID = {
-    "esp32_1": "corridor_a",
+    "node_1": "corridor_a",
 }
