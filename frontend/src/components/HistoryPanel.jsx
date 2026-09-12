@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ROOM_ID, SENSOR_KEYS, SENSOR_META } from "../config.js";
+import { SENSOR_KEYS, SENSOR_META } from "../config.js";
 import useHistory from "../hooks/useHistory.js";
 import Sparkline from "./Sparkline.jsx";
 
@@ -36,7 +36,7 @@ export default function HistoryPanel(props) {
   // History comes from the backend, so in demo mode there is nothing to ask
   // for — fall back to the rolling series the WebSocket hook already keeps.
   const history = useHistory({
-    roomId: ROOM_ID,
+    roomId: props.roomId,
     sensor: sensor,
     bucket: bucket,
     enabled: !props.demoMode,
