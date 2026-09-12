@@ -33,7 +33,9 @@ Field notes:
   per sample cycle, not one combined blob).
 - `value` — always a plain number. Boolean-style readings (e.g. the SW-420
   trip sensor) are encoded as `0` or `1`.
-- `timestamp` — ISO8601, e.g. `"2026-09-11T14:32:05Z"`.
+- `timestamp` — ISO8601 with a timezone, e.g. `"2026-09-11T14:32:05Z"`.
+  The backend rejects readings more than 5 minutes old or more than 60 seconds
+  in the future by default. These limits are configurable on the backend.
 
 Fixed `sensor` values (from the sensor node spec):
 
