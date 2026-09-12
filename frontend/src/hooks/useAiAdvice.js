@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { fetchJson } from "../config.js";
+import { DEMO_MODE, fetchJson } from "../config.js";
 
 // Ask-the-twin. /room-status/{room_id}/ai-advice is a plain non-streaming GET
 // with no request body, so there is nothing to stream and nothing to post.
@@ -23,7 +23,7 @@ function normaliseAdvice(advice) {
   return [];
 }
 
-export default function useAiAdvice(roomId) {
+export default function useAiAdvice(roomId, room) {
   const [messages, setMessages] = useState([]);
   const [isPending, setIsPending] = useState(false);
   const nextIdRef = useRef(1);
@@ -47,11 +47,19 @@ export default function useAiAdvice(roomId) {
       setIsPending(true);
 
       try {
-        // The backend assembles the room's live context itself; the question
-        // is not sent upstream, so the answer is grounded in current readings
-        // rather than in the phrasing of the question.
+        if (DEMO_MODE) {
+          const suggestions = normaliseAdvice(room && room.suggestions);
+          setMessages((previous) => previous.concat([{
+            id: takeId(), role: "twin", source: "rules",
+            lines: ["Demo data: scripted guidance; no language model was called."].concat(
+              suggestions.length ? suggestions : ["No alerts in the current demo phase."]
+            ),
+          }]));
+          return;
+        }
+        const params = new URLSearchParams({ question: trimmed });
         const payload = await fetchJson(
-          "/room-status/" + roomId + "/ai-advice",
+          "/room-status/" + encodeURIComponent(roomId) + "/ai-advice?" + params,
           { timeoutMs: REQUEST_TIMEOUT_MS }
         );
 
@@ -89,7 +97,7 @@ export default function useAiAdvice(roomId) {
         setIsPending(false);
       }
     },
-    [roomId, isPending, takeId]
+    [roomId, room, isPending, takeId]
   );
 
   return { messages: messages, isPending: isPending, ask: ask };

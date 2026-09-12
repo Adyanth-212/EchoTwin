@@ -90,7 +90,7 @@ export default function App() {
 function Dashboard(props) {
   const { roomId, feed, room, history, changedAt, suggestionState } = props;
   const notifications = props.notifications;
-  const advice = useAiAdvice(roomId);
+  const advice = useAiAdvice(roomId, room);
   const tracked = usePeoplePositions();
 
   // One request for every sensor at once — /history/sensors returns them all

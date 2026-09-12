@@ -105,6 +105,7 @@ export default function AskTwin(props) {
       <form className="ask-form" onSubmit={handleSubmit}>
         <input
           className="ask-input"
+          maxLength={1000}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={handleKeyDown}
