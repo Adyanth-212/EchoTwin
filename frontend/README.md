@@ -317,18 +317,21 @@ already delivers the pitch.
 ## The 3D room
 
 By default the twin draws a simple box room from the dimensions in
-`src/roomLayout.js`. Drop a phone scan in and it draws the real one.
+`src/roomLayout.js`. The scene supports a textured mesh and a photographic
+Gaussian splat, with a control above the canvas for switching between them.
 
 ### Using a real scan
 
-1. Scan the room with **Polycam**, **Scaniverse**, or **RoomPlan** (iPhone
-   Pro / iPad Pro only, and the cleanest option because LiDAR gives correct
-   real-world scale). Walk slowly, keep some overlap, get the floor.
-2. Export **GLB**. Draco compression is fine — the decoder is served locally
-   from `public/draco/`, so nothing is fetched from a CDN at runtime.
-3. Save it as `frontend/public/room.glb`, or point `VITE_ROOM_MODEL` at
-   another path under `public/`.
-4. Reload. If it looks wrong, adjust `ROOM_MODEL` in `src/roomLayout.js`.
+1. Scan the room with **Scaniverse**, **Polycam**, or **RoomPlan**. Walk
+   slowly, keep heavy overlap, and capture high, level, and low passes.
+2. Export the mesh as **GLB** and the Gaussian reconstruction as **PLY** or
+   **SPZ**.
+3. Save them as `frontend/public/scans/table-mesh.glb` and
+   `frontend/public/scans/table-gaussian.ply`, or set `VITE_ROOM_MESH` and
+   `VITE_ROOM_SPLAT` to different paths under `public/`.
+4. Reload and use the **Mesh / Gaussian** control above the 3D view.
+5. If either looks misaligned, adjust its block under `ROOM_MODEL` in
+   `src/roomLayout.js`.
 
 If the file is missing, malformed or the wrong format, the box room is drawn
 instead and everything else works normally. There is no state in which a bad
@@ -337,24 +340,52 @@ scan breaks the dashboard.
 Test the loader before you have a scan:
 
 ```bash
-echo "VITE_ROOM_MODEL=/room-sample.glb" >> .env
+echo "VITE_ROOM_MESH=/room-sample.glb" >> .env
 ```
 
 ### Fixing up a scan
 
-Everything is in the `ROOM_MODEL` block in `src/roomLayout.js`:
+Everything is in the `ROOM_MODEL.mesh` and `ROOM_MODEL.gaussian` blocks in
+`src/roomLayout.js`:
 
 | Field | What it does |
 |---|---|
-| `autoFit` | Measures the mesh and fits its footprint to `ROOM`, dropping the floor to y=0. Leave this on — a photogrammetry export arrives at an arbitrary scale, origin and orientation. |
+| `mesh.autoFit` | Measures the mesh and fits its footprint to `ROOM`, dropping the floor to y=0. Leave this on. |
 | `rotationY` | Degrees. Usually the only thing you need to change: scans rarely come out facing the way you want. |
-| `scale` | Extra multiplier after autoFit. Only needed if the room reads as the wrong size next to the markers. |
+| `scale` | Extra multiplier for the selected representation. Gaussian splats use this directly because distant background splats make automatic bounds unreliable. |
 | `offset` | Metres, after autoFit centring. |
-| `clipHeight` | Slices the scan above this height so you can look down into it. Without it a scan is a sealed opaque box and every marker inside is hidden. `null` shows the whole thing. |
+| `mesh.clipHeight` | Slices the mesh above this height for a dollhouse view. `null` shows the complete mesh. |
+| `gaussian.focalAdjustment` | Controls splat sharpness. The default favours image quality. |
+
+Both scans are included in Git. The Gaussian scan is stored as
+`public/scans/table-gaussian.ply.gz` (about 28 MiB, lossless compression).
+`npm run dev` and `npm run build` automatically unpack it to the ignored
+`table-gaussian.ply` before starting. No Git LFS or separate download is needed.
+Existing local PLY files are preserved. To adopt a newer archive after pulling,
+move your old PLY aside and run `node scripts/prepare-scans.mjs` again.
+The archive contains the cleaned display copy used by this viewer, not the
+untouched Scaniverse export in the original owner's Downloads folder.
+
+When running the frontend on another laptop, set `VITE_CAM1_HOST` and
+`VITE_CAM2_HOST` in its `.env` to the laptops running `cv/producer.py`, including
+ports (for example `camera-laptop:8010` and `camera-laptop:8011`). Restart Vite
+after changing them. These are the inference laptop addresses, not the Pixel's
+IP Webcam address; the Pixel's video URL is passed to the producer's `--source`.
 
 Marker positions in `MARKERS` are in metres in the same frame, so once the
 scan is aligned the sensor node and the AC unit sit where they really are.
 Each marker can also carry a `model` pointing at its own GLB under `public/`.
+
+### Placing sensor markers
+
+Open **Place markers** in the 3D view, choose a marker, and click its physical
+location on the Mesh scan. The raycast produces a real world-space coordinate;
+X/Y/Z inputs provide 5 cm fine-tuning. Positions are saved in this browser's
+local storage, and **Copy JSON** exports every coordinate for transferring the
+final values into `MARKERS` in `src/roomLayout.js`. Placement deliberately uses
+the triangle mesh: a 2D detector can suggest cables or electronics in a camera
+frame, but without registered camera depth it cannot recover a trustworthy 3D
+location in the scan.
 
 ---
 

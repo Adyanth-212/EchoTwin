@@ -39,8 +39,27 @@ export default function SensorMarker(props) {
       </mesh>
     );
 
+  function handleClick(event) {
+    if (props.onSelect) {
+      event.stopPropagation();
+      props.onSelect(marker.id);
+    }
+  }
+
   return (
-    <group position={marker.position}>
+    <group position={marker.position} onClick={handleClick}>
+      {props.selected ? (
+        <mesh>
+          <sphereGeometry args={[0.28, 16, 12]} />
+          <meshBasicMaterial
+            color="#ffffff"
+            transparent
+            opacity={0.72}
+            wireframe
+            depthWrite={false}
+          />
+        </mesh>
+      ) : null}
       <MarkerStem height={marker.position[1]} color={color} />
       {marker.model ? (
         <ModelFallback fallback={builtIn}>
