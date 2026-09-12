@@ -1,8 +1,19 @@
-import { Suspense, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Color, DoubleSide } from "three";
 import { ROOM, ROOM_MODEL } from "../roomLayout.js";
 import ModelFallback from "./ModelFallback.jsx";
 import RoomModel from "./RoomModel.jsx";
+
+// The splat renderer is several megabytes and is only needed after the
+// Gaussian button is selected. Keep the normal dashboard bundle lean.
+const GaussianRoomModel = lazy(() => import("./GaussianRoomModel.jsx"));
 
 const BASE_FLOOR = "#131a2a";
 const BASE_WALL = "#1a2236";
@@ -142,6 +153,8 @@ function useModelAvailable(url) {
   const [isAvailable, setIsAvailable] = useState(null);
 
   useEffect(() => {
+    setIsAvailable(null);
+
     if (!url) {
       setIsAvailable(false);
       return undefined;
@@ -178,30 +191,112 @@ function useModelAvailable(url) {
 export default function RoomShell(props) {
   const status = props.status;
   const boxRoom = <BoxRoom status={status} />;
+  const mode = props.mode === "gaussian" ? "gaussian" : "mesh";
+  const config = ROOM_MODEL[mode];
+  const [loadByMode, setLoadByMode] = useState({
+    mesh: { state: "loading", progress: null },
+    gaussian: { state: "loading", progress: null },
+  });
+  const [gaussianActivated, setGaussianActivated] = useState(false);
 
-  const wanted = ROOM_MODEL.enabled && Boolean(ROOM_MODEL.url);
-  const isAvailable = useModelAvailable(wanted ? ROOM_MODEL.url : null);
+  const wanted = ROOM_MODEL.enabled && Boolean(config && config.url);
+  const isAvailable = useModelAvailable(wanted ? config.url : null);
 
-  // null means the probe has not answered yet - show the box room meanwhile
-  // rather than flashing empty space.
-  if (!wanted || isAvailable !== true) {
-    return (
-      <group>
-        {boxRoom}
-        <StatusWash status={status} />
-      </group>
-    );
-  }
+  useEffect(() => {
+    if (!props.onModelState) {
+      return;
+    }
+    if (!wanted) {
+      props.onModelState({ mode: mode, state: "disabled" });
+    } else if (isAvailable === false) {
+      props.onModelState({ mode: mode, state: "missing" });
+    } else if (isAvailable !== true) {
+      props.onModelState({ mode: mode, state: "loading", progress: null });
+    } else {
+      props.onModelState({ mode: mode, ...loadByMode[mode] });
+    }
+  }, [isAvailable, loadByMode, mode, props.onModelState, wanted]);
 
-  // The boundary stays as the second line of defence: the file existing does
-  // not make it valid.
+  useEffect(() => {
+    if (mode === "gaussian" && wanted && isAvailable === true) {
+      // Do not unmount Spark when switching back to the mesh. Its sorter can
+      // still be completing an asynchronous depth readback, and tearing the
+      // renderer down mid-readback produces Spark's "No target" error. It is
+      // also much faster to keep this 119 MB scan warm for the next toggle.
+      setGaussianActivated(true);
+    }
+  }, [isAvailable, mode, wanted]);
+
+  const handleMeshLoad = useCallback(() => {
+    setLoadByMode((current) => ({
+      ...current,
+      mesh: { state: "ready", progress: 100 },
+    }));
+  }, []);
+
+  const handleGaussianLoad = useCallback(() => {
+    setLoadByMode((current) => ({
+      ...current,
+      gaussian: { state: "ready", progress: 100 },
+    }));
+  }, []);
+
+  const handleGaussianProgress = useCallback((loaded, total) => {
+    const progress = total > 0 ? Math.round((loaded / total) * 100) : null;
+    setLoadByMode((current) => ({
+      ...current,
+      gaussian: { state: "loading", progress: progress },
+    }));
+  }, []);
+
+  const handleGaussianError = useCallback((error) => {
+    console.warn("Could not render gaussian room scan.", error);
+    setLoadByMode((current) => ({
+      ...current,
+      gaussian: { state: "error", progress: null },
+    }));
+  }, []);
+
+  const canRenderSelected = wanted && isAvailable === true;
+  const selectedReady = loadByMode[mode].state === "ready";
+  const showBoxRoom = !canRenderSelected || !selectedReady;
+
   return (
     <group>
-      <ModelFallback fallback={boxRoom}>
-        <Suspense fallback={boxRoom}>
-          <RoomModel />
-        </Suspense>
-      </ModelFallback>
+      {/* Keep useful geometry visible during the availability probe/load. */}
+      {showBoxRoom ? boxRoom : null}
+
+      {mode === "mesh" && canRenderSelected ? (
+        <ModelFallback fallback={boxRoom}>
+          <Suspense fallback={null}>
+            <RoomModel
+              onLoad={handleMeshLoad}
+              onSurfaceClick={
+                props.placementEnabled ? props.onSurfaceClick : null
+              }
+            />
+          </Suspense>
+        </ModelFallback>
+      ) : null}
+
+      {/*
+        Once loaded, the Gaussian renderer remains mounted but its scan is
+        hidden in Mesh mode. This lets Spark finish outstanding GPU work and
+        makes repeated visual quality comparisons instant.
+      */}
+      {gaussianActivated ? (
+        <ModelFallback fallback={null}>
+          <Suspense fallback={null}>
+            <GaussianRoomModel
+              visible={mode === "gaussian"}
+              onLoad={handleGaussianLoad}
+              onProgress={handleGaussianProgress}
+              onError={handleGaussianError}
+            />
+          </Suspense>
+        </ModelFallback>
+      ) : null}
+
       <StatusWash status={status} />
     </group>
   );

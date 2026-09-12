@@ -728,6 +728,179 @@ select {
   display: block;
 }
 
+.scene-model-switch {
+  position: absolute;
+  left: 12px;
+  top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid rgba(43, 53, 80, 0.9);
+  border-radius: 9px;
+  background: rgba(14, 19, 32, 0.86);
+  backdrop-filter: blur(5px);
+}
+
+.scene-model-switch-label {
+  padding: 0 5px 0 3px;
+  color: var(--dim);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.scene-model-switch button {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.scene-model-switch button:hover {
+  border-color: var(--hairline);
+  color: var(--text);
+}
+
+.scene-model-switch button.active {
+  border-color: rgba(75, 208, 192, 0.42);
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.scene-model-state {
+  padding: 0 4px;
+  color: var(--dim);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.scene-model-state.is-ready {
+  color: var(--green);
+}
+
+.marker-editor {
+  position: absolute;
+  left: 12px;
+  top: 52px;
+  z-index: 8;
+  width: min(310px, calc(100% - 24px));
+  color: var(--text);
+}
+
+.marker-editor-toggle,
+.marker-editor button {
+  border: 1px solid var(--hairline);
+  border-radius: 7px;
+  background: rgba(14, 19, 32, 0.92);
+  color: var(--muted);
+  font-size: 11px;
+  padding: 6px 9px;
+}
+
+.marker-editor button:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.marker-editor-toggle.active {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.marker-editor-body {
+  margin-top: 7px;
+  padding: 11px;
+  border: 1px solid rgba(43, 53, 80, 0.95);
+  border-radius: 9px;
+  background: rgba(14, 19, 32, 0.95);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(7px);
+}
+
+.marker-editor-head {
+  display: grid;
+  gap: 5px;
+}
+
+.marker-editor-head label {
+  color: var(--dim);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.marker-editor-head select,
+.marker-editor-coordinates input {
+  width: 100%;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  outline: none;
+  background: var(--raised);
+  color: var(--text);
+}
+
+.marker-editor-head select {
+  padding: 7px 8px;
+  font-size: 12px;
+}
+
+.marker-editor-help {
+  margin: 9px 0 7px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.marker-editor-ready {
+  margin-bottom: 9px;
+  color: var(--accent);
+  font-size: 10px;
+}
+
+.marker-editor-mesh {
+  margin-bottom: 9px;
+  color: var(--accent) !important;
+}
+
+.marker-editor-coordinates {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+
+.marker-editor-coordinates label {
+  display: grid;
+  gap: 4px;
+  color: var(--dim);
+  font-size: 9px;
+}
+
+.marker-editor-coordinates input {
+  padding: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.marker-editor-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.marker-editor-message {
+  margin-top: 8px;
+  color: var(--green);
+  font-size: 10px;
+}
+
 .scene-hint {
   position: absolute;
   left: 12px;
@@ -735,6 +908,31 @@ select {
   font-size: 11px;
   color: var(--dim);
   pointer-events: none;
+}
+
+.scene-navigation {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  display: flex;
+  gap: 5px;
+  z-index: 25;
+}
+
+.scene-navigation button {
+  min-width: 32px;
+  padding: 7px 9px;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  background: rgba(14, 19, 32, 0.94);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.scene-navigation button:hover { border-color: var(--accent); }
+
+@media (max-width: 700px) {
+  .scene-hint { max-width: calc(100% - 160px); font-size: 9px; }
 }
 
 .scene-legend {
@@ -759,6 +957,24 @@ select {
   height: 8px;
   border-radius: 2px;
   background: var(--accent);
+}
+
+@media (max-width: 700px) {
+  .scene-model-state,
+  .scene-model-switch-label {
+    display: none;
+  }
+
+  .scene-legend {
+    top: 88px;
+    max-width: calc(100% - 24px);
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .marker-editor {
+    top: 50px;
+  }
 }
 
 /* Marker labels rendered through drei's <Html>. */
