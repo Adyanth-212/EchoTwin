@@ -126,10 +126,27 @@ class MaintenanceDatabaseTests(unittest.TestCase):
         with db.engine.begin() as connection:
             connection.execute(text("""INSERT INTO sensor_readings(time,node_id,room_id,sensor,value)
                 VALUES (:time,'node_1','corridor_a','temperature',25)"""), {"time": self.now - timedelta(seconds=90)})
-        metrics = store.collect("corridor_a", self.now, self.settings)["sensors"]["temperature"]
+        metrics = store.collect("corridor_a", datetime.now(timezone.utc), self.settings)["sensors"]["temperature"]
         self.assertFalse(metrics["fresh"])
         self.assertGreaterEqual(metrics["sample_age_seconds"], 90)
         self.assertIsNotNone(metrics["received_at"])
+
+    def test_review_ignores_arrivals_after_its_cutoff(self):
+        with db.engine.begin() as connection:
+            for offset, value in ((-1, 25), (0.2, 38)):
+                fields = {"sample": self.now - timedelta(seconds=2 if offset < 0 else 1),
+                          "arrival": self.now + timedelta(seconds=offset), "value": value}
+                connection.execute(text("""INSERT INTO sensor_readings(time,received_at,node_id,room_id,sensor,value)
+                    VALUES (:sample,:arrival,'node_1','corridor_a','temperature',:value)"""), fields)
+                connection.execute(text("""INSERT INTO cv_events(time,received_at,room_id,camera_id,occupancy)
+                    VALUES (:sample,:arrival,'corridor_a','cam1',:value)"""), fields)
+        snapshot = store.collect("corridor_a", self.now, self.settings)
+        metric = snapshot["sensors"]["temperature"]
+        self.assertTrue(metric["fresh"])
+        self.assertEqual(metric["latest"], 25)
+        self.assertEqual(metric["count"], 1)
+        self.assertTrue(snapshot["cameras"]["cam1"]["fresh"])
+        self.assertEqual(snapshot["cameras"]["cam1"]["occupancy"], 25)
 
     @patch("app.maintenance.worker.notifications.dispatch")
     def test_stale_critical_incident_cannot_dispatch_during_urgent_tick(self, dispatch):
