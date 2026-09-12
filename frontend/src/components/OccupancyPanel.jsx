@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { DEMO_MODE, ROOM_ID, fetchJson, formatAgo } from "../config.js";
+import { DEMO_MODE, fetchJson, formatAgo } from "../config.js";
 import { useCvHistory } from "../hooks/useHistory.js";
 import Sparkline from "./Sparkline.jsx";
 
@@ -72,7 +72,11 @@ export default function OccupancyPanel(props) {
   const sensors = (props.room && props.room.sensors) || {};
   const count = sensors.occupancy_count;
 
-  const cvHistory = useCvHistory({ roomId: ROOM_ID, bucket: "5m", enabled: !DEMO_MODE });
+  const cvHistory = useCvHistory({
+    roomId: props.roomId,
+    bucket: "5m",
+    enabled: !DEMO_MODE,
+  });
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {

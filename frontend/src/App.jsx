@@ -126,6 +126,7 @@ function Dashboard(props) {
           <RoomScene room={room} cameraCounts={cameraCounts} />
           <SensorGrid room={room} history={history} changedAt={changedAt} />
           <OccupancyPanel
+            roomId={roomId}
             room={room}
             cameraEvents={props.cameraEvents.byCamera}
             liveHistory={history}
@@ -146,7 +147,7 @@ function Dashboard(props) {
         </div>
       </div>
 
-      <HistoryPanel demoMode={DEMO_MODE} liveHistory={history} />
+      <HistoryPanel roomId={roomId} demoMode={DEMO_MODE} liveHistory={history} />
     </div>
   );
 }
