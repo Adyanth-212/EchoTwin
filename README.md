@@ -43,25 +43,29 @@ python mocks/mock_mqtt_publisher.py
 
 ## frontend/ (owner: Adyanth)
 
-Next.js (App Router) + TypeScript + Tailwind dashboard. Polls
-`GET /api/state` every 2.5s (a server-side proxy to the backend's `/state`
-endpoint) and posts to `/api/ask` (a server-side proxy to Ollama) for the
-chat panel — the browser never talks to the backend or Ollama directly,
-which avoids CORS entirely since both are on private/VPN-only addresses.
+React + Three.js dashboard.
 
 Install: [Node.js](https://nodejs.org/) 18+.
 
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local
+cp .env.example .env
 npm run dev
 ```
 
-Opens at `http://localhost:3000`. `BACKEND_URL` and `OLLAMA_URL` in
-`frontend/.env.local` are read server-side only, inside the API routes. If
-the backend is unreachable, the dashboard falls back to a small hardcoded
-demo dataset and shows an amber "Demo data" badge instead of a blank page.
+Opens at `http://localhost:5173`. By default it points at the mock
+WebSocket sender (`VITE_WS_URL` in `frontend/.env`) so you can work
+without the real backend running:
+
+```bash
+cd backend
+pip install -r mocks/requirements.txt
+python mocks/mock_ws_sender.py
+```
+
+Swap `VITE_WS_URL` to `ws://<SERVER_IP>:8000/ws/room-status` once the real
+backend is up.
 
 ## esp32-firmware/ (owner: Akshay)
 
