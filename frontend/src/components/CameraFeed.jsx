@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { CAMERA_FEEDS, DEMO_MODE, formatAgo } from "../config.js";
+import { CAMERA_FEEDS, formatAgo } from "../config.js";
 
 // The frame the model actually ran on, with its detection boxes drawn.
 //
@@ -12,6 +12,9 @@ import { CAMERA_FEEDS, DEMO_MODE, formatAgo } from "../config.js";
 // stream holds a connection open and freezes on a dead producer without
 // saying so; a failed request is unambiguous, and the browser keeps showing
 // the previous frame while the next one loads, so it does not flicker.
+//
+// These are shown in demo mode too: VITE_DEMO is about the backend being
+// unreachable, and a camera can perfectly well be running while it is.
 
 const FRAMES_PER_SECOND = 2;
 const ENABLED_KEY = "echotwin.camera.feeds";
@@ -121,11 +124,7 @@ export default function CameraFeed() {
         </button>
       </div>
 
-      {DEMO_MODE ? (
-        <p className="panel-empty">
-          No camera feed in demo mode — the readings above are synthetic.
-        </p>
-      ) : !isEnabled ? (
+      {!isEnabled ? (
         <p className="panel-empty">
           Feeds paused. They are the heaviest thing on the network here, so
           this is worth leaving off until someone asks to see them.
