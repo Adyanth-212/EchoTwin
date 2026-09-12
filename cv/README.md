@@ -90,6 +90,20 @@ and use Iriun as a normal device index.
 
 ## Run
 
+**Both cameras on one laptop (this machine's current setup):**
+
+```bash
+./run_cameras.sh
+```
+
+Opens two Terminal windows, one producer each, using the last-known-good
+camera indices. Stop both with `./stop_cameras.sh`. If a camera got
+unplugged or a phone reconnected, indices can shift — run
+`python3 producer.py --list-cameras` first and override, e.g.
+`CAM1_INDEX=2 ./run_cameras.sh`.
+
+**Manually, or on separate laptops:**
+
 Laptop 1:
 
 ```bash

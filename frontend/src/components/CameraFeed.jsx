@@ -16,7 +16,7 @@ import { CAMERA_FEEDS, formatAgo } from "../config.js";
 // These are shown in demo mode too: VITE_DEMO is about the backend being
 // unreachable, and a camera can perfectly well be running while it is.
 
-const FRAMES_PER_SECOND = 2;
+const FRAMES_PER_SECOND = 4;
 // A camera laptop that is not running is the normal case, and polling it
 // twice a second fills the console with failed requests — enough to flush
 // everything else out of the buffer and make the page undebuggable. Back off
