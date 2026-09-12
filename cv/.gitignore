@@ -1,0 +1,4 @@
+camera-index-*.jpg
+calibration_*.json
+yolov8n.pt
+.venv/
