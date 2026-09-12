@@ -19,6 +19,15 @@ esp32-firmware/
 │   └── i2c_scanner.ino
 ├── sensor_node/
 │   └── sensor_node.ino
+├── tools/
+│   ├── serial_logger.py
+│   ├── analyze_calibration.py
+│   ├── replay_to_mqtt.py
+│   ├── requirements.txt
+│   └── tests/
+├── data/                  # ignored local captures
+├── calibration/           # ignored generated reports
+├── CALIBRATION.md
 └── src/
     ├── i2c_scanner.cpp
     └── sensor_node.cpp
@@ -29,8 +38,9 @@ the canonical Arduino sketches. Do not duplicate implementation code in them.
 
 `i2c_scanner.ino` scans once at boot and explicitly reports each expected
 device as present or missing. `sensor_node.ino` initializes every sensor,
-prints readings even without a network, and publishes valid readings when
-Wi-Fi, MQTT, and NTP time are available.
+prints readable and structured readings even without a network, and publishes
+valid readings when Wi-Fi, MQTT, and NTP time are available. See
+[`CALIBRATION.md`](CALIBRATION.md) for the exact Review 2 offline workflow.
 
 ## Fixed wiring
 
@@ -106,11 +116,18 @@ The only emitted sensor names are `temperature`, `humidity`, `eco2`, `tvoc`,
 `aqi`, `surface_temp`, `vibration_magnitude`, `vibration_trip`,
 `temperature_backup`, and `humidity_backup`.
 
-The MLX90614 ambient reading and raw MPU-6050 axes are printed to Serial for
-debugging, but they are not published because the fixed MQTT contract has no
-names for them. `vibration_magnitude` is the acceleration-vector magnitude's
-absolute deviation from standard gravity, in m/s^2; establish a real baseline
-after mounting the sensor.
+The MLX90614 ambient reading and raw MPU-6050 axes are printed to Serial and
+included in the offline record, but they are not published because the fixed
+MQTT contract has no names for them. `vibration_magnitude` is the one-second
+rolling RMS of the MPU-6050 dynamic acceleration magnitude in m/s². The dynamic
+component is calculated after subtracting a slowly adapting per-axis gravity
+baseline from approximately 100 Hz samples. This is installation-specific
+baseline characterization, not laboratory-grade vibration calibration.
+
+Independently of the 7.5-second MQTT cycle, the firmware prints one line per
+second beginning with `[SERIAL_DATA]`. Its JSON contains device uptime rather
+than invented ESP32 wall-clock time; the offline logger adds authoritative UTC
+`host_timestamp` values on the laptop. Missing measurements are `null`.
 
 ## Exact test sequence at the venue
 
@@ -158,7 +175,12 @@ Flash `sensor_node/sensor_node.ino` while its network values still contain
 - MLX90614 ambient and object/surface temperatures.
 - MPU-6050 acceleration XYZ, gyro XYZ, and vibration magnitude.
 - SW-420 trip state as `0` or `1`.
-- DHT22 backup values, or a clear warning if it is absent.
+- A clear message that DHT22 is intentionally disabled and AHT21 is authoritative.
+
+The SW-420 line also reports its unmodified raw state, debounced/latched trip,
+HIGH and LOW sample counts, raw transitions, and event count. If its signal
+never changes, adjust the module potentiometer and determine whether taps make
+the output active-LOW or active-HIGH before changing `SW420_ACTIVE_STATE`.
 
 PlatformIO terminal:
 
