@@ -40,7 +40,7 @@ from ultralytics import YOLO
 # Must match the backend's CVEvent pattern exactly.
 ROOM_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
 
-DEFAULT_BACKEND = "http://sanjays-macbook-air.tail833b77.ts.net:8000"
+DEFAULT_BACKEND = "http://sanjays-macbook-air.tail22578a.ts.net:8000"
 
 # COCO class 0 is "person". The model is the pretrained YOLOv8n as shipped —
 # no training and no custom weights.

@@ -239,7 +239,9 @@ function buildDemoMessage(elapsedMs) {
     source = "fusion";
     anomaly = {
       is_anomaly: climb > 0.2,
-      score: climb > 0.2 ? round(-0.31 - climb * 0.22, 3) : null,
+      // Positive and small, matching the real backend: it negates sklearn's
+      // decision_function, so a higher score is more anomalous.
+      score: climb > 0.2 ? round(0.02 + climb * 0.05, 4) : null,
       top_features:
         climb > 0.2 ? ["surface_temp", "vibration_magnitude"] : [],
     };
