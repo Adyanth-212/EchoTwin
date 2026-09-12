@@ -3,12 +3,14 @@ import json
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
-from app import db
+from app import config, db
 from app.fusion import build_room_status
 from app.mqtt_listener import start_mqtt_listener, stop_mqtt_listener
 from app.ollama_client import get_ai_advice
+from app.routes.history import router as history_router
 from app.routes.ws import router as ws_router
 from app.schemas.cv import CVEvent
 from app.ws_manager import manager
@@ -23,7 +25,15 @@ async def lifespan(app):
     stop_mqtt_listener(mqtt_client)
 
 
-app = FastAPI(title="EchoTwin backend", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="EchoTwin backend", version="0.3.0", lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=config.CORS_ALLOWED_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
+app.include_router(history_router)
 app.include_router(ws_router)
 
 
