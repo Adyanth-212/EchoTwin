@@ -2,7 +2,7 @@ import asyncio
 import json
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
@@ -162,15 +162,18 @@ def single_room_status(room_id: str):
 
 
 @app.get("/room-status/{room_id}/ai-advice")
-def room_ai_advice(room_id: str):
+def room_ai_advice(room_id: str, question: str | None = Query(default=None, max_length=1000)):
     status = fetch_room_status(room_id)
-    advice = get_ai_advice(status)
+    advice = get_ai_advice(status, question=question)
 
     if advice is None:
         return {
             "room_id": room_id,
             "source": "rules",
-            "advice": status["suggestions"],
+            "advice": status["suggestions"] or [
+                "No rule-based alerts in the latest stored readings. "
+                "Keep monitoring; the language model is currently unavailable."
+            ],
         }
 
     return {"room_id": room_id, "source": "ollama", "advice": advice}
