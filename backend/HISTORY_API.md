@@ -3,6 +3,10 @@
 The history endpoints read existing PostgreSQL/TimescaleDB data. They do not
 change the MQTT or WebSocket contracts.
 
+Sensor readings and computer-vision events are retained for 30 days. TimescaleDB
+removes older chunks automatically. `room_status` is not subject to this policy
+because it stores only the latest calculated state for each room.
+
 Interactive documentation is available at `http://<backend-host>:8000/docs`.
 
 ## Rooms with stored data

@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from app import config, db
 from app.fusion import build_room_status
 from app.schemas.mqtt import MQTTMessage
+from app.timestamp_validation import sensor_timestamp_rejection_reason
 
 
 def on_connect(client, userdata, flags, reason_code, properties=None):
@@ -21,6 +22,16 @@ def on_message(client, userdata, msg):
     except ValidationError as error:
         print("Rejected malformed MQTT message on topic", msg.topic)
         print(error)
+        return
+
+    timestamp_error = sensor_timestamp_rejection_reason(message.timestamp)
+    if timestamp_error is not None:
+        print(
+            "Rejected sensor reading from",
+            message.node_id,
+            "because",
+            timestamp_error,
+        )
         return
 
     room_id = config.NODE_ID_TO_ROOM_ID.get(message.node_id)

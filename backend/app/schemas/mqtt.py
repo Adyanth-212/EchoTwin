@@ -4,7 +4,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 SensorName = Literal[
     "temperature",
@@ -25,3 +25,10 @@ class MQTTMessage(BaseModel):
     sensor: SensorName
     value: float
     timestamp: datetime
+
+    @field_validator("timestamp")
+    @classmethod
+    def timestamp_must_include_timezone(cls, value):
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("timestamp must include a timezone")
+        return value
