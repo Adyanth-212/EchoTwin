@@ -41,7 +41,7 @@ pip install -r mocks/requirements.txt
 python mocks/mock_mqtt_publisher.py
 ```
 
-## frontend/ (owner: you)
+## frontend/ (owner: Adyanth)
 
 Next.js (App Router) + TypeScript + Tailwind dashboard. Polls
 `GET /api/state` every 2.5s (a server-side proxy to the backend's `/state`
