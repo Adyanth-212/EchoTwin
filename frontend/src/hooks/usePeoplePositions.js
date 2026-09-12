@@ -25,6 +25,7 @@ const POLL_INTERVAL_MS = 1000;
 // page genuinely hard to debug. Back right off while every feed is down, and
 // return to full rate the moment one answers.
 const IDLE_POLL_INTERVAL_MS = 6000;
+const MAX_IDLE_POLL_INTERVAL_MS = 30000;
 
 function distance(a, b) {
   const dx = a.x - b.x;
@@ -199,6 +200,7 @@ export default function usePeoplePositions() {
     // change with the feeds' state without tearing the effect down.
     let timer = null;
     let stopped = false;
+    let idleStreak = 0;
 
     async function loop() {
       await poll();
@@ -206,10 +208,18 @@ export default function usePeoplePositions() {
         return;
       }
       const anyOnline = Object.keys(byCamera).length > 0;
-      timer = setTimeout(
-        loop,
-        anyOnline ? POLL_INTERVAL_MS : IDLE_POLL_INTERVAL_MS
+      if (anyOnline) {
+        idleStreak = 0;
+      } else {
+        idleStreak = Math.min(idleStreak + 1, 5);
+      }
+      // Escalate while nothing is there: 6s, then 12s, then 30s. A dev
+      // session with no camera attached should go quiet, not keep shouting.
+      const idleDelay = Math.min(
+        IDLE_POLL_INTERVAL_MS * idleStreak,
+        MAX_IDLE_POLL_INTERVAL_MS
       );
+      timer = setTimeout(loop, anyOnline ? POLL_INTERVAL_MS : idleDelay);
     }
 
     loop();
