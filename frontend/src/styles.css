@@ -1637,3 +1637,19 @@ select {
   color: var(--dim);
   padding: 14px 0 16px;
 }
+/* Maintenance is independent of the live room WebSocket contract. */
+.maintenance-summary { color: var(--dim); font-size: 12px; line-height: 1.6; margin: 8px 0; }
+.maintenance-error { color: #f7b4a7; font-size: 13px; }
+.maintenance-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; font-size: 12px; }
+.maintenance-actions button:disabled { opacity: .45; cursor: default; }
+.maintenance-incident { border: 1px solid #354058; border-left: 3px solid #e6b564; border-radius: 8px; padding: 12px; margin-top: 12px; font-size: 13px; line-height: 1.5; }
+.maintenance-incident[data-severity="critical"] { border-left-color: #ee8078; }
+.maintenance-title { display: flex; justify-content: space-between; gap: 8px; }
+.maintenance-title > span { font-size: 11px; text-transform: uppercase; color: #e6b564; }
+.maintenance-detail { margin: 10px 0; font-size: 12px; }
+.maintenance-detail summary { cursor: pointer; }
+.maintenance-detail pre { overflow: auto; max-height: 220px; padding: 8px; background: #101521; font-size: 11px; }
+.maintenance-sources > div { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid #283044; }
+.maintenance-sources > div[data-fresh="false"] { color: #f2ba80; }
+.maintenance-notification { background: #202939; padding: 10px; border-radius: 6px; margin-top: 10px; }
+.maintenance-list { max-height: 560px; overflow-y: auto; overscroll-behavior: contain; padding-right: 3px; }

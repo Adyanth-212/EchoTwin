@@ -163,7 +163,7 @@ Wi-Fi/hotspot LAN address.
 ## Branches
 
 - `main` — verified demo baseline; only tested fixes go here
-- `main-testing` — AR/proximity experimentation on the relevant device
+- `main-testing` — maintenance watcher and AR/proximity experimentation
 - `akshay-esp32` — firmware work
 - `aditya-backend` — backend work
 - `adyanth-frontend` — frontend work
@@ -213,3 +213,16 @@ The anomaly model has a synthetic training baseline; linear extrapolation
 is a trend estimate, not a validated failure forecast. Markers have configured
 positions. Stored sensor values can outlive their source, so use actual reading
 timestamps (the readiness check) to confirm freshness.
+
+## Experimental maintenance watcher
+
+On `main-testing`, the optional backend worker reviews five minutes of data
+every three minutes, checks sustained critical conditions more frequently,
+and stores incidents with evidence, acknowledgement and resolution history.
+The existing Qwen3:8b model explains inspection suggestions; deterministic
+rules control incidents and notification eligibility. Calls default to dry run.
+
+See [maintenance setup, safety limits and validation](backend/MAINTENANCE.md).
+The sidecar can run on the backend laptop without restarting the demo API;
+the frontend laptop only needs the panel and its proxy setting. Do not merge
+the experiment into `main` until the team has reviewed it.
