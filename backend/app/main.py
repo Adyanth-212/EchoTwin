@@ -1,26 +1,30 @@
-from fastapi import FastAPI
+import asyncio
+import json
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, HTTPException
+from sqlalchemy import text
 
 from app import db
-from app.mqtt_listener import start_mqtt_listener
+from app.fusion import build_room_status
+from app.mqtt_listener import start_mqtt_listener, stop_mqtt_listener
+from app.ollama_client import get_ai_advice
 from app.routes.ws import router as ws_router
-
-app = FastAPI(title="EchoTwin backend")
-app.include_router(ws_router)
-
-mqtt_client = None
+from app.schemas.cv import CVEvent
+from app.ws_manager import manager
 
 
-@app.on_event("startup")
-def on_startup():
-    global mqtt_client
+@asynccontextmanager
+async def lifespan(app):
+    manager.set_loop(asyncio.get_running_loop())
     db.init_db()
     mqtt_client = start_mqtt_listener()
+    yield
+    stop_mqtt_listener(mqtt_client)
 
 
-@app.on_event("shutdown")
-def on_shutdown():
-    if mqtt_client is not None:
-        mqtt_client.loop_stop()
+app = FastAPI(title="EchoTwin backend", version="0.2.0", lifespan=lifespan)
+app.include_router(ws_router)
 
 
 @app.get("/health")
@@ -28,6 +32,135 @@ def health():
     return {"status": "ok"}
 
 
-# TODO(Aditya): add REST endpoints for the dashboard to fetch historical
-# readings (for the trend chart) and the anomaly-explanation history, once
-# the fusion logic in app/mqtt_listener.py is implemented.
+@app.get("/db-health")
+def db_health():
+    try:
+        with db.engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        return {"database": "connected"}
+    except Exception as error:
+        return {"database": "error", "detail": str(error)}
+
+
+@app.get("/sensor-readings")
+def sensor_readings(limit: int = 20):
+    safe_limit = min(max(limit, 1), 500)
+    with db.engine.connect() as connection:
+        rows = connection.execute(
+            text(
+                """
+                SELECT time, node_id, room_id, sensor, value
+                FROM sensor_readings
+                ORDER BY time DESC
+                LIMIT :limit
+                """
+            ),
+            {"limit": safe_limit},
+        ).fetchall()
+    return [dict(row._mapping) for row in rows]
+
+
+@app.post("/cv")
+def receive_cv(event: CVEvent):
+    raw_data = event.model_dump(mode="json")
+    with db.engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                INSERT INTO cv_events
+                    (time, room_id, camera_id, occupancy,
+                     unusual_activity, confidence, raw_data)
+                VALUES
+                    (:time, :room_id, :camera_id, :occupancy,
+                     :unusual_activity, :confidence, CAST(:raw_data AS JSONB))
+                """
+            ),
+            {
+                "time": event.timestamp,
+                "room_id": event.room_id,
+                "camera_id": event.camera_id,
+                "occupancy": event.occupancy,
+                "unusual_activity": event.unusual_activity,
+                "confidence": event.confidence,
+                "raw_data": json.dumps(raw_data),
+            },
+        )
+
+    build_room_status(event.room_id, "cv")
+    return {
+        "status": "saved",
+        "room_id": event.room_id,
+        "occupancy": event.occupancy,
+    }
+
+
+@app.get("/cv-events")
+def cv_events(limit: int = 20):
+    safe_limit = min(max(limit, 1), 500)
+    with db.engine.connect() as connection:
+        rows = connection.execute(
+            text(
+                """
+                SELECT time, room_id, camera_id, occupancy,
+                       unusual_activity, confidence
+                FROM cv_events
+                ORDER BY time DESC
+                LIMIT :limit
+                """
+            ),
+            {"limit": safe_limit},
+        ).fetchall()
+    return [dict(row._mapping) for row in rows]
+
+
+def serialize_room_status(row):
+    return {
+        "room_id": row.room_id,
+        "timestamp": row.updated_at.isoformat(),
+        "status": row.status,
+        "source": row.source,
+        "sensors": row.sensors,
+        "anomaly": row.anomaly,
+        "trend": row.trend,
+        "suggestions": row.suggestions,
+    }
+
+
+@app.get("/room-status")
+def room_statuses():
+    with db.engine.connect() as connection:
+        rows = connection.execute(
+            text("SELECT * FROM room_status ORDER BY room_id")
+        ).fetchall()
+    return [serialize_room_status(row) for row in rows]
+
+
+def fetch_room_status(room_id):
+    with db.engine.connect() as connection:
+        row = connection.execute(
+            text("SELECT * FROM room_status WHERE room_id = :room_id"),
+            {"room_id": room_id},
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Room not found")
+    return serialize_room_status(row)
+
+
+@app.get("/room-status/{room_id}")
+def single_room_status(room_id: str):
+    return fetch_room_status(room_id)
+
+
+@app.get("/room-status/{room_id}/ai-advice")
+def room_ai_advice(room_id: str):
+    status = fetch_room_status(room_id)
+    advice = get_ai_advice(status)
+
+    if advice is None:
+        return {
+            "room_id": room_id,
+            "source": "rules",
+            "advice": status["suggestions"],
+        }
+
+    return {"room_id": room_id, "source": "ollama", "advice": advice}

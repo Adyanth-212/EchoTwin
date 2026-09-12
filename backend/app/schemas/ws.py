@@ -3,7 +3,7 @@
 
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 RoomStatus = Literal["green", "yellow", "red"]
 UpdateSource = Literal["sensor", "cv", "fusion"]
@@ -24,7 +24,7 @@ class SensorReadings(BaseModel):
 class AnomalyInfo(BaseModel):
     is_anomaly: bool = False
     score: Optional[float] = None
-    top_features: List[str] = []
+    top_features: List[str] = Field(default_factory=list)
 
 
 class TrendInfo(BaseModel):

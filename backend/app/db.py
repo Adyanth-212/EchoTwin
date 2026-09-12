@@ -1,53 +1,95 @@
-import psycopg2
+import json
+
+from sqlalchemy import create_engine, text
 
 from app import config
 
 
-def get_connection():
-    connection = psycopg2.connect(
-        host=config.POSTGRES_HOST,
-        port=config.POSTGRES_PORT,
-        dbname=config.POSTGRES_DB,
-        user=config.POSTGRES_USER,
-        password=config.POSTGRES_PASSWORD,
+engine = create_engine(config.DATABASE_URL, pool_pre_ping=True)
+
+
+SCHEMA_STATEMENTS = [
+    "CREATE EXTENSION IF NOT EXISTS timescaledb",
+    """
+    CREATE TABLE IF NOT EXISTS rooms (
+        room_id TEXT PRIMARY KEY,
+        display_name TEXT NOT NULL
     )
-    return connection
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS sensor_readings (
+        id BIGSERIAL,
+        time TIMESTAMPTZ NOT NULL,
+        node_id TEXT NOT NULL,
+        room_id TEXT NOT NULL,
+        sensor TEXT NOT NULL,
+        value DOUBLE PRECISION NOT NULL,
+        raw_data JSONB,
+        PRIMARY KEY (time, id)
+    )
+    """,
+    """
+    SELECT create_hypertable(
+        'sensor_readings', 'time', if_not_exists => TRUE
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS cv_events (
+        id BIGSERIAL,
+        time TIMESTAMPTZ NOT NULL,
+        room_id TEXT NOT NULL,
+        camera_id TEXT NOT NULL,
+        occupancy INTEGER NOT NULL,
+        unusual_activity BOOLEAN DEFAULT FALSE,
+        confidence DOUBLE PRECISION,
+        raw_data JSONB,
+        PRIMARY KEY (time, id)
+    )
+    """,
+    """
+    SELECT create_hypertable(
+        'cv_events', 'time', if_not_exists => TRUE
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS room_status (
+        room_id TEXT PRIMARY KEY,
+        updated_at TIMESTAMPTZ NOT NULL,
+        status TEXT NOT NULL,
+        source TEXT NOT NULL,
+        sensors JSONB NOT NULL,
+        anomaly JSONB NOT NULL,
+        trend JSONB NOT NULL,
+        suggestions JSONB NOT NULL DEFAULT '[]'::jsonb
+    )
+    """,
+]
 
 
 def init_db():
-    connection = get_connection()
-    cursor = connection.cursor()
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS sensor_readings (
-            id SERIAL PRIMARY KEY,
-            node_id TEXT NOT NULL,
-            room_id TEXT NOT NULL,
-            sensor TEXT NOT NULL,
-            value DOUBLE PRECISION NOT NULL,
-            reading_time TIMESTAMPTZ NOT NULL
+    with engine.begin() as connection:
+        for statement in SCHEMA_STATEMENTS:
+            connection.execute(text(statement))
+
+
+def insert_sensor_reading(message, room_id, raw_payload):
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                INSERT INTO sensor_readings
+                    (time, node_id, room_id, sensor, value, raw_data)
+                VALUES
+                    (:time, :node_id, :room_id, :sensor, :value,
+                     CAST(:raw_data AS JSONB))
+                """
+            ),
+            {
+                "time": message.timestamp,
+                "node_id": message.node_id,
+                "room_id": room_id,
+                "sensor": message.sensor,
+                "value": message.value,
+                "raw_data": json.dumps(raw_payload),
+            },
         )
-        """
-    )
-    connection.commit()
-    cursor.close()
-    connection.close()
-
-    # TODO(Aditya): convert sensor_readings into a TimescaleDB hypertable
-    # (SELECT create_hypertable(...)) once the schema is finalized, so the
-    # trend early-warning feature can query it efficiently.
-
-
-def insert_sensor_reading(node_id, room_id, sensor, value, reading_time):
-    connection = get_connection()
-    cursor = connection.cursor()
-    cursor.execute(
-        """
-        INSERT INTO sensor_readings (node_id, room_id, sensor, value, reading_time)
-        VALUES (%s, %s, %s, %s, %s)
-        """,
-        (node_id, room_id, sensor, value, reading_time),
-    )
-    connection.commit()
-    cursor.close()
-    connection.close()

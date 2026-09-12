@@ -32,6 +32,16 @@ docker compose up
 Brings up all three services. FastAPI is on `http://localhost:8000`
 (`/health` for a liveness check), the WebSocket endpoint is
 `ws://localhost:8000/ws/room-status`, Postgres on `5432`, MQTT on `1883`.
+The database schema and TimescaleDB hypertables are created automatically.
+
+Sensor nodes publish to `echotwin/sensors/<node_id>`. The backend maps the
+node ID to a room, stores the reading, fuses it with the latest CV occupancy,
+scores anomalies and trends, then broadcasts the fixed WebSocket shape from
+`schemas/mqtt_and_ws.md`.
+
+Useful REST endpoints are `/sensor-readings`, `/cv`, `/cv-events`,
+`/room-status`, `/room-status/<room_id>`, and
+`/room-status/<room_id>/ai-advice`.
 
 No real ESP32 yet? Run the mock publisher against the broker instead:
 
@@ -76,11 +86,9 @@ Arduino/PlatformIO project; install
 
 ## ml/
 
-Isolation Forest anomaly detection. Not implemented yet — see
-[`ml/README.md`](ml/README.md).
-
-Install (when work starts): Python 3.11+, `pip install scikit-learn
-pandas`.
+Isolation Forest anomaly detection with a reproducible synthetic baseline for
+the demo. See [`ml/README.md`](ml/README.md) for retraining details. The score
+is an anomaly deviation score, not a classification accuracy.
 
 ## schemas/
 
