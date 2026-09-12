@@ -1,4 +1,8 @@
+import { Suspense } from "react";
 import { Html } from "@react-three/drei";
+import MarkerModel from "./MarkerModel.jsx";
+import MarkerStem from "./MarkerStem.jsx";
+import ModelFallback from "./ModelFallback.jsx";
 import { SENSOR_META, STATUS_ORDER, formatValue, severityFor } from "../config.js";
 
 const HEALTH_COLOR = {
@@ -30,6 +34,15 @@ function equipmentHealth(sensors) {
   return firstLevel >= secondLevel ? first : second;
 }
 
+function EquipmentBox() {
+  return (
+    <mesh>
+      <boxGeometry args={[0.9, 0.55, 0.38]} />
+      <meshStandardMaterial color="#28324b" roughness={0.7} />
+    </mesh>
+  );
+}
+
 export default function EquipmentMarker(props) {
   const marker = props.marker;
   const sensors = props.sensors || {};
@@ -41,10 +54,16 @@ export default function EquipmentMarker(props) {
 
   return (
     <group position={marker.position}>
-      <mesh>
-        <boxGeometry args={[0.9, 0.55, 0.38]} />
-        <meshStandardMaterial color="#28324b" roughness={0.7} />
-      </mesh>
+      <MarkerStem height={marker.position[1]} color={color} />
+      {marker.model ? (
+        <ModelFallback fallback={<EquipmentBox />}>
+          <Suspense fallback={<EquipmentBox />}>
+            <MarkerModel url={marker.model} fit={0.9} />
+          </Suspense>
+        </ModelFallback>
+      ) : (
+        <EquipmentBox />
+      )}
 
       {/* Health indicator sits on the machine itself, so the state of the
           equipment is visible in the scene without opening a panel. */}

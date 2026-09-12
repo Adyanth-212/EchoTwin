@@ -27,6 +27,44 @@
 
 export const ROOM = { width: 6, depth: 4.6, height: 3 };
 
+/* --- Scanned room model -----------------------------------------------
+ *
+ * Drop a phone scan of the real room at `frontend/public/room.glb` and it
+ * replaces the plain box geometry. Export GLB from Polycam, Scaniverse or
+ * RoomPlan; Draco compression is fine, the decoder is served locally from
+ * public/draco so nothing is fetched from a CDN at runtime.
+ *
+ * If the file is missing or fails to load, the box room is used instead —
+ * the dashboard never breaks because a scan is absent or malformed.
+ *
+ * `autoFit` scales and centres the scan so its footprint matches ROOM
+ * above, which gets an arbitrarily-oriented photogrammetry mesh roughly
+ * right on the first try. Then nudge it with the values below.
+ */
+export const ROOM_MODEL = {
+  enabled: true,
+  url: import.meta.env.VITE_ROOM_MODEL || "/room.glb",
+
+  autoFit: true,
+  // Extra multiplier applied after autoFit. 1 = leave it alone.
+  scale: 1,
+  // Metres, applied after autoFit centring.
+  offset: [0, 0, 0],
+  // Degrees about the vertical axis. Scans rarely come out facing the way
+  // you want; this is usually the only value you need to change.
+  rotationY: 0,
+
+  // Dollhouse cutaway: slice the scan off above this height in metres so
+  // you look down into the room. A scan is a sealed opaque box otherwise,
+  // and every marker inside it is hidden behind a wall. Raise it to see
+  // more wall, lower it to see more floor; null shows the whole scan.
+  clipHeight: 2.2,
+};
+
+/* Each marker may carry an optional `model` — a path under public/ to a GLB
+ * for that object (e.g. "/models/ac-unit.glb"). Without one, the simple
+ * built-in geometry for its `kind` is drawn instead, and a model that fails
+ * to load falls back to the same. */
 export const MARKERS = [
   {
     id: "esp32_1",
