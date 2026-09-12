@@ -1,0 +1,11 @@
+# Pinned so both camera laptops run the same thing. opencv is held on the
+# 4.x line: ultralytics is tested against it, and 5.x is a very recent major
+# bump that is not worth discovering on demo morning.
+ultralytics==8.3.253
+opencv-python==4.12.0.88
+requests==2.32.5
+
+# Imported directly by producer.py for the floor homography. Deliberately
+# unpinned: ultralytics and opencv both constrain numpy, and forcing a
+# version here is a good way to discover a resolver conflict on demo morning.
+numpy
