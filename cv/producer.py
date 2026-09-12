@@ -269,6 +269,9 @@ def macos_camera_names():
     return names
 
 
+
+
+
 def list_cameras():
     """Print which indices open, with names where the platform provides them."""
     print("Probing camera indices...")
@@ -279,29 +282,69 @@ def list_cameras():
         print("Cameras macOS reports:")
         index = 0
         while index < len(names):
-            print("  " + str(index) + "?  " + names[index])
+            print("  - " + names[index])
             index = index + 1
         print("")
-        print("The order above usually matches the OpenCV indices below, but")
-        print("it is not guaranteed - confirm by opening one.")
+        print("NOTE: this order does NOT reliably match the OpenCV indices")
+        print("below. Use the saved thumbnails to identify each camera.")
         print("")
 
+    here = os.path.dirname(os.path.abspath(__file__))
+
     opened = []
+    misses = 0
     index = 0
     while index < MAX_PROBE_INDEX:
+        # OpenCV prints "out device of bound" to stderr for every index past
+        # the last real camera, which buries the useful output. Once a few in
+        # a row have failed there is nothing further up to find.
+        if misses >= 3:
+            break
+
         capture = cv2.VideoCapture(index)
+        if not capture.isOpened():
+            misses = misses + 1
         if capture.isOpened():
-            was_read, frame = capture.read()
-            if was_read and frame is not None:
+            misses = 0
+            # The first frame off a camera is often black while it wakes up,
+            # so take a few and keep the last.
+            frame = None
+            attempt = 0
+            while attempt < 5:
+                was_read, candidate = capture.read()
+                if was_read and candidate is not None:
+                    frame = candidate
+                attempt = attempt + 1
+
+            if frame is not None:
                 size = str(frame.shape[1]) + "x" + str(frame.shape[0])
                 opened.append(index)
-                print("  index " + str(index) + ": opened, " + size)
+
+                # The order macOS lists cameras in is NOT the order OpenCV
+                # indexes them, so naming them by position is guesswork.
+                # Save a picture from each instead and let the eye decide.
+                thumbnail_path = os.path.join(
+                    here, "camera-index-" + str(index) + ".jpg"
+                )
+                cv2.imwrite(thumbnail_path, frame)
+                print(
+                    "  index "
+                    + str(index)
+                    + ": opened, "
+                    + size
+                    + "  ->  "
+                    + thumbnail_path
+                )
             else:
                 print("  index " + str(index) + ": opened but returned no frame")
         capture.release()
         index = index + 1
 
     print("")
+    if len(opened) > 0:
+        print("Open the camera-index-*.jpg files above to see which is which.")
+        print("")
+
     if len(opened) == 0:
         print("No cameras opened.")
         if platform.system() == "Darwin":
