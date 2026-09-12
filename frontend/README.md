@@ -152,6 +152,89 @@ connection indicator. It defaults to on, because a hackathon hall is loud.
 
 ---
 
+## The LLM path (ask-the-twin)
+
+The `LLM` / `RULES` badge on each answer says which produced it. If it is
+always `RULES`, the cause is almost certainly one of the three settings
+below rather than anything in the frontend.
+
+The browser never talks to Ollama. The chain is:
+
+```
+AskTwin ──/api/room-status/{id}/ai-advice──▶ backend ──▶ Ollama (home PC, via Tailscale)
+```
+
+Ollama runs on the home PC at **`http://100.64.88.63:11434`**, serving
+`qwen3:8b` (8.2B, Q4_K_M, 5.6GB). Verified reachable from the tailnet at
+~0.26s round trip.
+
+### Required backend settings
+
+These go in `backend/.env` on `sanjays-macbook-air`, where the backend runs.
+**They are not set by default and every one of them silently forces the rule
+based fallback:**
+
+```ini
+TAILSCALE_OLLAMA_URL=http://100.64.88.63:11434
+OLLAMA_MODEL=qwen3:8b
+OLLAMA_TIMEOUT_SECONDS=20
+```
+
+- `TAILSCALE_OLLAMA_URL` defaults to empty, and `get_ai_advice` returns
+  `None` immediately when it is unset.
+- `OLLAMA_MODEL` defaults to `llama3.1:8b`, which is **not installed** on
+  that machine. Only `qwen3:8b` is.
+- `OLLAMA_TIMEOUT_SECONDS` defaults to `2.5`. Measured generation time for
+  the backend's own prompt is **4.9-6.5s**, so at 2.5s the LLM never once
+  answers in time.
+
+### Why it is slow, and the one-line fix
+
+qwen3 is a reasoning model: it spends most of that time in a thinking pass.
+Ollama 0.34 returns that separately in a `thinking` field, so none of it
+leaks into the answer, but you pay for it.
+
+Sending `"think": false` collapses generation to **0.7-2.2s**, which fits
+inside the original 2.5s timeout with room to spare. That is one line in
+`backend/app/ollama_client.py`:
+
+```python
+json={
+    "model": config.OLLAMA_MODEL,
+    "prompt": prompt,
+    "stream": False,
+    "think": False,          # <- this
+},
+```
+
+That file belongs to the backend branch and is not changed here. Until it
+is, raise the timeout instead.
+
+Two things that look like fixes and are not: `"/no_think"` as a system
+prompt is ignored by Ollama 0.34, and setting `think` as a model-level
+parameter via `/api/create` is accepted and then ignored. Worse, capping
+`num_predict` on such a variant starves the answer, because the cap counts
+thinking tokens too - it returns `done_reason: length` with an **empty**
+response. Both were tried against the live server.
+
+### Keeping the model in VRAM
+
+Already handled: `expires_at` on the loaded model reads year 2318, and it
+stays there after a request that sends no `keep_alive`, so
+`OLLAMA_KEEP_ALIVE` is set server-side on the home PC. Nothing to do.
+
+To pin it manually from any machine on the tailnet:
+
+```bash
+curl http://100.64.88.63:11434/api/generate \
+  -d '{"model":"qwen3:8b","keep_alive":"24h"}'
+```
+
+An empty prompt loads the model without generating. Use `-1` instead of
+`"24h"` for indefinite. Note that a later request that omits `keep_alive`
+resets the timer to the server default, which is why the server-side
+`OLLAMA_KEEP_ALIVE` is the durable answer rather than a one-off curl.
+
 ## The QR / mobile view
 
 The reliable half of the AR pitch: stick a QR code on the actual machine,
