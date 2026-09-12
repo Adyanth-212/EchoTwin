@@ -5,6 +5,11 @@ import { sensorLabel } from "../config.js";
 // and there is no labelled fault data to validate it against. The wording
 // below is deliberate — calling it a confidence would be a factual error
 // about what the model produces, not a stylistic choice.
+//
+// Direction matters too. sklearn's decision_function is NEGATIVE for
+// outliers, but backend/app/anomaly.py negates it, so here a HIGHER score
+// means further from baseline. Confirmed against live data: the real
+// backend reports is_anomaly true with score +0.0216.
 export default function AnomalyPanel(props) {
   const anomaly = (props.room && props.room.anomaly) || null;
   const isAnomaly = Boolean(anomaly && anomaly.is_anomaly);
@@ -53,7 +58,7 @@ export default function AnomalyPanel(props) {
           ) : null}
 
           <p className="anomaly-caveat">
-            A raw deviation score from an unsupervised model — lower means
+            A raw deviation score from an unsupervised model — higher means
             further from the learned baseline. It is not an accuracy or a
             probability, and there is no labelled fault data to validate it
             against.

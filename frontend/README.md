@@ -16,6 +16,27 @@ Opens at <http://localhost:5173>.
 
 ---
 
+## The tailnet
+
+Everything at the venue talks over Tailscale. **These addresses change if the
+tailnet is recreated** — they already have once, which broke every hardcoded
+hostname in this repo.
+
+| Machine | Tailscale IP | MagicDNS | Runs |
+|---|---|---|---|
+| `sanjays-macbook-air` | `100.93.145.13` | `sanjays-macbook-air.tail22578a.ts.net` | Backend, Postgres, Mosquitto |
+| `adyanths-macbook-air` | `100.117.169.11` | `adyanths-macbook-air.tail22578a.ts.net` | Dashboard, CV producer (iPhone) |
+| `akshay-lenovo` | `100.105.226.40` | `akshay-lenovo.tail22578a.ts.net` | — |
+
+Current MagicDNS suffix: `tail22578a.ts.net`. Check with `tailscale status`.
+
+If MagicDNS is not resolving on a machine, use the raw `100.x` address — set
+`VITE_BACKEND_HOST=100.93.145.13:8000` in `frontend/.env`. That is the only
+place the frontend needs it; `vite.config.js` reads it and both REST and the
+WebSocket follow.
+
+For the CV producer it is `--backend http://100.93.145.13:8000`.
+
 ## How it talks to the backend
 
 The browser never calls the backend directly. `vite.config.js` proxies
@@ -50,7 +71,7 @@ All optional. Copy `.env.example` to `.env` to change any of them.
 
 | Variable | Default | What it does |
 |---|---|---|
-| `VITE_BACKEND_HOST` | `sanjays-macbook-air.tail833b77.ts.net:8000` | Backend host:port. Read by `vite.config.js` only; both REST and WebSocket follow it. **Restart the dev server after changing it.** |
+| `VITE_BACKEND_HOST` | `sanjays-macbook-air.tail22578a.ts.net:8000` | Backend host:port. Read by `vite.config.js` only; both REST and WebSocket follow it. **Restart the dev server after changing it.** |
 | `VITE_WS_URL` | unset | Bypasses the proxy and connects the WebSocket straight to this URL. Only for the mock sender. |
 | `VITE_ROOM_ID` | `corridor_a` | The room this dashboard shows. |
 | `VITE_DEMO` | unset | `1` feeds the whole UI from a built-in synthetic generator. See below. |

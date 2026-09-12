@@ -232,7 +232,7 @@ Re-run with --camera-index <one of those>.
 | `--camera-index` | `2` | OpenCV device index |
 | `--camera-id` | `cam1` | Identifier sent to the backend; must differ per laptop |
 | `--room-id` | `corridor_a` | Room this camera watches; lowercase snake_case |
-| `--backend` | the Tailscale hostname | Backend base URL |
+| `--backend` | `sanjays-macbook-air.tail22578a.ts.net:8000` | Backend base URL; use `http://100.93.145.13:8000` if MagicDNS will not resolve |
 | `--interval` | `1.5` | Seconds between inference samples |
 | `--conf` | `0.4` | Confidence floor for a detection to count |
 | `--jump` | `3` | Occupancy change between samples that counts as unusual |
