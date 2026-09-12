@@ -24,14 +24,30 @@ export default function AskTwin(props) {
     }
   }, [messages.length, isPending]);
 
-  function handleSubmit(event) {
-    event.preventDefault();
-    if (isPending) {
+  function submitDraft() {
+    if (isPending || draft.trim().length === 0) {
       return;
     }
     const question = draft;
     setDraft("");
     props.onAsk(question);
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    submitDraft();
+  }
+
+  // Enter submits explicitly rather than relying on the form's implicit
+  // submission, which does not fire in every browser once the button's
+  // disabled state is bound to the input. preventDefault keeps this from
+  // double-firing where implicit submission does work.
+  function handleKeyDown(event) {
+    if (event.key !== "Enter" || event.nativeEvent.isComposing) {
+      return;
+    }
+    event.preventDefault();
+    submitDraft();
   }
 
   return (
@@ -91,6 +107,7 @@ export default function AskTwin(props) {
           className="ask-input"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="Is this room safe to work in?"
           aria-label="Ask the twin about this room"
         />
