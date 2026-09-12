@@ -31,10 +31,14 @@ function sensorRows(sensors) {
   ];
 }
 
+function peopleLabel(count) {
+  return String(count) + (count === 1 ? " person" : " people");
+}
+
 function cameraRows(marker, sensors, cameraCounts) {
   const known = cameraCounts && cameraCounts[marker.id];
   if (known !== undefined && known !== null) {
-    return [{ label: "Occupancy", value: String(known) + " people" }];
+    return [{ label: "Occupancy", value: peopleLabel(known) }];
   }
   // No event from this camera yet — show the room total rather than a zero
   // that would read as "nobody is there".
@@ -44,7 +48,7 @@ function cameraRows(marker, sensors, cameraCounts) {
       value:
         sensors.occupancy_count === null || sensors.occupancy_count === undefined
           ? "—"
-          : String(sensors.occupancy_count) + " people",
+          : peopleLabel(sensors.occupancy_count),
     },
   ];
 }
