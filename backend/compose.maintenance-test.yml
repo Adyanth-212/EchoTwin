@@ -1,0 +1,48 @@
+# Isolated database for regression tests; no production volume, broker or port.
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg17
+    environment:
+      POSTGRES_DB: maintenance_test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test_only
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d maintenance_test"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  tests:
+    build: .
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: maintenance_test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test_only
+      TAILSCALE_OLLAMA_URL: ""
+      MAINTENANCE_USE_LLM: "0"
+      MAINTENANCE_NOTIFICATION_MODE: dry_run
+      MAINTENANCE_INTEGRATION_TESTS: "1"
+    volumes:
+      - ./tests:/app/tests:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["python", "-m", "unittest", "discover", "-s", "tests", "-v"]
+  api:
+    profiles: [ui]
+    build: .
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: maintenance_test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test_only
+      MAINTENANCE_USE_LLM: "0"
+      MAINTENANCE_NOTIFICATION_MODE: dry_run
+    ports:
+      - "127.0.0.1:18002:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["uvicorn", "app.maintenance.api:app", "--host", "0.0.0.0", "--port", "8000"]

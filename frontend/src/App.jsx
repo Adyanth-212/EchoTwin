@@ -23,6 +23,7 @@ import CameraFeed from "./components/CameraFeed.jsx";
 import ToastStack from "./components/ToastStack.jsx";
 import NotificationPermission from "./components/NotificationPermission.jsx";
 import MobileStatus from "./components/MobileStatus.jsx";
+import MaintenancePanel from "./components/MaintenancePanel.jsx";
 
 // No router dependency: the QR-code landing view is selected by query string,
 // read once at startup.
@@ -164,6 +165,7 @@ function Dashboard(props) {
         </div>
 
         <div className="app-right">
+          <MaintenancePanel roomId={roomId} />
           <AnomalyPanel room={room} />
           <StatusTimeline entries={props.statusHistory} />
           <SuggestionList

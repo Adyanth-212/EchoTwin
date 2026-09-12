@@ -45,6 +45,12 @@ export default defineConfig(({ mode }) => {
       // the dashboard and the QR-code mobile view.
       host: true,
       proxy: {
+        // Optional sidecar keeps maintenance experiments off the demo API.
+        "/api/maintenance": {
+          target: "http://" + (env.VITE_MAINTENANCE_HOST || backendHost),
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, ""),
+        },
         "/api": {
           target: httpTarget,
           changeOrigin: true,

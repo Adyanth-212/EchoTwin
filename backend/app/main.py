@@ -11,6 +11,8 @@ from app.fusion import build_room_status
 from app.mqtt_listener import start_mqtt_listener, stop_mqtt_listener
 from app.ollama_client import get_ai_advice
 from app.routes.history import router as history_router
+from app.routes.maintenance import router as maintenance_router
+from app.maintenance.store import init_schema as init_maintenance_schema
 from app.routes.ws import router as ws_router
 from app.schemas.cv import CVEvent
 from app.ws_manager import manager
@@ -20,6 +22,7 @@ from app.ws_manager import manager
 async def lifespan(app):
     manager.set_loop(asyncio.get_running_loop())
     db.init_db()
+    init_maintenance_schema()
     mqtt_client = start_mqtt_listener()
     yield
     stop_mqtt_listener(mqtt_client)
@@ -34,6 +37,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(history_router)
+app.include_router(maintenance_router)
 app.include_router(ws_router)
 
 
