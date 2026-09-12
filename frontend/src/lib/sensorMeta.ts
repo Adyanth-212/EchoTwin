@@ -9,6 +9,7 @@ const SENSOR_META: Record<string, SensorMeta> = {
   humidity: { label: "Humidity", unit: "%", icon: "💧" },
   eco2: { label: "eCO₂", unit: "ppm", icon: "🧪" },
   tvoc: { label: "TVOC", unit: "ppb", icon: "🧬" },
+  aqi: { label: "AQI", unit: "", icon: "🌫️" },
   ir_temperature: { label: "Surface Temp (IR)", unit: "°C", icon: "🎯" },
   vibration: { label: "Vibration", unit: "g", icon: "📳" },
 };
