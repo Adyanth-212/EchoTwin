@@ -10,9 +10,25 @@
 #
 #   CAM1_INDEX=2 CAM2_INDEX=0 ./run_cameras.sh
 
-set -e
 cd "$(dirname "$0")"
 HERE="$(pwd)"
+
+# Safe no-op on a machine that hasn't set up cv/ (e.g. a teammate's laptop
+# via `npm run dev`'s predev hook) — never block the frontend from starting.
+if [ ! -d ".venv" ]; then
+  echo "cv/.venv not found — skipping camera auto-start (see cv/README.md Install)."
+  exit 0
+fi
+
+# Don't pile up duplicate producers/Terminal windows if already running
+# (predev runs this on every `npm run dev`).
+running=$(pgrep -f "[p]roducer\.py" 2>/dev/null || true)
+if [ -n "$running" ]; then
+  echo "Camera producers already running (pid(s): $running) — not starting duplicates."
+  exit 0
+fi
+
+set -e
 
 CAM1_INDEX="${CAM1_INDEX:-0}"
 CAM2_INDEX="${CAM2_INDEX:-1}"
