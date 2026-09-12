@@ -57,18 +57,42 @@ function foldMessage(state, message, receivedAt) {
   const changedAtByRoom = Object.assign({}, state.changedAtByRoom);
   changedAtByRoom[roomId] = roomChanged;
 
+  const anomaly = message.anomaly || {};
+  const previousStatus = state.statusByRoom[roomId] || [];
+  const statusEntry = {
+    t: receivedAt,
+    status: message.status,
+    isAnomaly: Boolean(anomaly.is_anomaly),
+    score:
+      anomaly.score === null || anomaly.score === undefined
+        ? null
+        : Number(anomaly.score),
+  };
+
+  const statusByRoom = Object.assign({}, state.statusByRoom);
+  statusByRoom[roomId] = previousStatus
+    .slice(-(STATUS_HISTORY_LIMIT - 1))
+    .concat([statusEntry]);
+
   return {
     rooms: rooms,
     historyByRoom: historyByRoom,
     changedAtByRoom: changedAtByRoom,
+    statusByRoom: statusByRoom,
     lastMessageAt: receivedAt,
   };
 }
+
+// Status and anomaly score are not available historically from any endpoint —
+// the backend stores only the current room_status row. So the timeline is
+// built from what this session has actually observed, and labelled as such.
+const STATUS_HISTORY_LIMIT = 600;
 
 const EMPTY_STATE = {
   rooms: {},
   historyByRoom: {},
   changedAtByRoom: {},
+  statusByRoom: {},
   lastMessageAt: null,
 };
 
@@ -166,6 +190,7 @@ export default function useRoomStatus() {
     rooms: state.rooms,
     historyByRoom: state.historyByRoom,
     changedAtByRoom: state.changedAtByRoom,
+    statusByRoom: state.statusByRoom,
     lastMessageAt: state.lastMessageAt,
     connectionState: connectionState,
     isConnected: connectionState === "live" || connectionState === "demo",
