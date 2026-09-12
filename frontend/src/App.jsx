@@ -15,6 +15,7 @@ import SuggestionList from "./components/SuggestionList.jsx";
 import AskTwin from "./components/AskTwin.jsx";
 import HistoryPanel from "./components/HistoryPanel.jsx";
 import OccupancyPanel, { useCameraEvents } from "./components/OccupancyPanel.jsx";
+import CameraFeed from "./components/CameraFeed.jsx";
 import ToastStack from "./components/ToastStack.jsx";
 import NotificationPermission from "./components/NotificationPermission.jsx";
 import MobileStatus from "./components/MobileStatus.jsx";
@@ -131,6 +132,7 @@ function Dashboard(props) {
             people={tracked.people}
           />
           <SensorGrid room={room} history={history} changedAt={changedAt} />
+          <CameraFeed />
           <OccupancyPanel
             roomId={roomId}
             room={room}

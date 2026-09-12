@@ -22,7 +22,9 @@ clever comprehensions, matching the project's Python style preference.
 import argparse
 import json
 import os
+import platform
 import re
+import subprocess
 import sys
 import threading
 import time
@@ -59,7 +61,16 @@ CORNER_PROMPTS = [
     "far-left",
 ]
 
-# Shared between the inference loop and the HTTP thread.
+# Colours are BGR, as OpenCV wants them.
+BOX_COLOR = (192, 208, 75)
+BOX_TEXT_COLOR = (255, 255, 255)
+
+# Shared between the inference loop and the HTTP thread. The preview is the
+# frame inference actually ran on, with its boxes drawn, so what the dashboard
+# shows is what the model saw - not a different frame grabbed later.
+latest_preview = {"jpeg": None, "timestamp": None}
+preview_lock = threading.Lock()
+
 latest_state = {
     "camera_id": "cam1",
     "room_id": "corridor_a",
@@ -136,6 +147,29 @@ def parse_arguments():
         ),
     )
     parser.add_argument(
+        "--list-cameras",
+        action="store_true",
+        help=(
+            "List the camera indices that open, with device names on macOS, "
+            "then exit. Use it to find which index is the iPhone."
+        ),
+    )
+    parser.add_argument(
+        "--preview-width",
+        type=int,
+        default=640,
+        help=(
+            "Width in pixels of the annotated preview served to the "
+            "dashboard. 0 turns the preview off (default: 640)"
+        ),
+    )
+    parser.add_argument(
+        "--preview-quality",
+        type=int,
+        default=70,
+        help="JPEG quality of the preview, 1-100 (default: 70)",
+    )
+    parser.add_argument(
         "--calibrate",
         action="store_true",
         help=(
@@ -196,6 +230,94 @@ def describe_source(source):
 def calibration_path(camera_id):
     here = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(here, "calibration_" + camera_id + ".json")
+
+
+def macos_camera_names():
+    """Camera names macOS knows about, in the order it reports them.
+
+    OpenCV has no cross-platform way to name a capture device, which makes
+    finding the iPhone a guessing game. On macOS the system can be asked.
+    Continuity Camera shows up here as "<name>'s iPhone" once the phone is
+    locked, stationary and on the same Apple ID.
+    """
+    if platform.system() != "Darwin":
+        return []
+
+    try:
+        output = subprocess.run(
+            ["system_profiler", "-json", "SPCameraDataType"],
+            capture_output=True,
+            timeout=12,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+
+    if output.returncode != 0:
+        return []
+
+    try:
+        parsed = json.loads(output.stdout.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return []
+
+    names = []
+    for entry in parsed.get("SPCameraDataType", []):
+        name = entry.get("_name")
+        if name:
+            names.append(name)
+    return names
+
+
+def list_cameras():
+    """Print which indices open, with names where the platform provides them."""
+    print("Probing camera indices...")
+    print("")
+
+    names = macos_camera_names()
+    if len(names) > 0:
+        print("Cameras macOS reports:")
+        index = 0
+        while index < len(names):
+            print("  " + str(index) + "?  " + names[index])
+            index = index + 1
+        print("")
+        print("The order above usually matches the OpenCV indices below, but")
+        print("it is not guaranteed - confirm by opening one.")
+        print("")
+
+    opened = []
+    index = 0
+    while index < MAX_PROBE_INDEX:
+        capture = cv2.VideoCapture(index)
+        if capture.isOpened():
+            was_read, frame = capture.read()
+            if was_read and frame is not None:
+                size = str(frame.shape[1]) + "x" + str(frame.shape[0])
+                opened.append(index)
+                print("  index " + str(index) + ": opened, " + size)
+            else:
+                print("  index " + str(index) + ": opened but returned no frame")
+        capture.release()
+        index = index + 1
+
+    print("")
+    if len(opened) == 0:
+        print("No cameras opened.")
+        if platform.system() == "Darwin":
+            print("")
+            print("On macOS the camera permission prompt is for your TERMINAL")
+            print("app, not for Python. If you are on SSH or have no GUI")
+            print("session, it fails silently - run this from a real terminal")
+            print("window and approve the prompt.")
+        return 1
+
+    labels = []
+    for value in opened:
+        labels.append(str(value))
+    print("Usable indices: " + ", ".join(labels))
+    print("Re-run with --camera-index <one of those>.")
+    return 0
 
 
 def probe_available_indices(skip_index):
@@ -429,8 +551,10 @@ def floor_position(homography, foot_x, foot_y):
 def detect_people(model, frame, confidence_floor, homography):
     """One inference pass.
 
-    Returns (count, mean_confidence_or_None, people), where people holds a
-    floor position per detection when the camera has been calibrated.
+    Returns (count, mean_confidence_or_None, people, detections). `people`
+    holds a floor position per detection once the camera is calibrated;
+    `detections` holds the pixel boxes, which are needed to draw the preview
+    whether or not there is a calibration.
     """
     results = model.predict(
         frame,
@@ -442,6 +566,7 @@ def detect_people(model, frame, confidence_floor, homography):
     count = 0
     confidence_total = 0.0
     people = []
+    detections = []
 
     for result in results:
         boxes = result.boxes
@@ -453,13 +578,16 @@ def detect_people(model, frame, confidence_floor, homography):
             count = count + 1
             confidence_total = confidence_total + score
 
-            if homography is not None:
-                corners = boxes.xyxy[index]
-                left = float(corners[0])
-                top = float(corners[1])
-                right = float(corners[2])
-                bottom = float(corners[3])
+            corners = boxes.xyxy[index]
+            left = float(corners[0])
+            top = float(corners[1])
+            right = float(corners[2])
+            bottom = float(corners[3])
 
+            world_x = None
+            world_z = None
+
+            if homography is not None:
                 # Feet, not centre: the bottom edge of the box is where the
                 # person meets the floor, which is the only point a
                 # floor homography can place correctly.
@@ -476,13 +604,103 @@ def detect_people(model, frame, confidence_floor, homography):
                     }
                 )
 
+            detections.append(
+                {
+                    "left": left,
+                    "top": top,
+                    "right": right,
+                    "bottom": bottom,
+                    "conf": score,
+                    "x": world_x,
+                    "z": world_z,
+                }
+            )
+
             index = index + 1
 
     if count == 0:
-        return 0, None, people
+        return 0, None, people, detections
 
     mean_confidence = confidence_total / count
-    return count, round(mean_confidence, 3), people
+    return count, round(mean_confidence, 3), people, detections
+
+
+def build_preview(frame, detections, camera_id, width, quality):
+    """The inference frame with its boxes drawn, JPEG encoded.
+
+    This is deliberately the frame the model actually ran on rather than a
+    fresh grab, so what the dashboard shows is what produced the numbers
+    beside it.
+    """
+    if width <= 0:
+        return None
+
+    annotated = frame.copy()
+
+    index = 0
+    while index < len(detections):
+        detection = detections[index]
+        left = int(detection["left"])
+        top = int(detection["top"])
+        right = int(detection["right"])
+        bottom = int(detection["bottom"])
+
+        cv2.rectangle(annotated, (left, top), (right, bottom), BOX_COLOR, 2)
+
+        label = str(int(round(detection["conf"] * 100))) + "%"
+        if detection["x"] is not None:
+            label = (
+                label
+                + "  x="
+                + str(round(detection["x"], 1))
+                + " z="
+                + str(round(detection["z"], 1))
+            )
+
+        text_top = max(top - 8, 14)
+        cv2.putText(
+            annotated,
+            label,
+            (left, text_top),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            BOX_TEXT_COLOR,
+            1,
+            cv2.LINE_AA,
+        )
+
+        # Mark the point actually used for positioning, so a bad calibration
+        # is obvious from the preview rather than only from the 3D view.
+        foot_x = int((left + right) / 2)
+        cv2.circle(annotated, (foot_x, bottom), 4, BOX_COLOR, -1)
+
+        index = index + 1
+
+    height, original_width = annotated.shape[:2]
+    if original_width > width:
+        scale = float(width) / float(original_width)
+        annotated = cv2.resize(
+            annotated, (width, int(round(height * scale)))
+        )
+
+    cv2.putText(
+        annotated,
+        camera_id + "  " + str(len(detections)) + " person(s)",
+        (10, 22),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        BOX_TEXT_COLOR,
+        2,
+        cv2.LINE_AA,
+    )
+
+    safe_quality = min(max(quality, 1), 100)
+    was_encoded, buffer = cv2.imencode(
+        ".jpg", annotated, [int(cv2.IMWRITE_JPEG_QUALITY), safe_quality]
+    )
+    if not was_encoded:
+        return None
+    return buffer.tobytes()
 
 
 def post_event(session, backend_url, payload):
@@ -505,6 +723,10 @@ class PositionsHandler(BaseHTTPRequestHandler):
     """
 
     def do_GET(self):
+        if self.path.startswith("/frame.jpg"):
+            self.serve_frame()
+            return
+
         if not self.path.startswith("/positions"):
             self.send_response(404)
             self.send_header("Content-Type", "application/json")
@@ -527,6 +749,35 @@ class PositionsHandler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(payload)
+
+    def serve_frame(self):
+        preview_lock.acquire()
+        try:
+            jpeg = latest_preview["jpeg"]
+            timestamp = latest_preview["timestamp"]
+        finally:
+            preview_lock.release()
+
+        if jpeg is None:
+            # 503 rather than 404: the endpoint exists, there is just no
+            # frame yet (or the preview was turned off).
+            self.send_response(503)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(b'{"detail":"no frame yet"}')
+            return
+
+        self.send_response(200)
+        self.send_header("Content-Type", "image/jpeg")
+        self.send_header("Content-Length", str(len(jpeg)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        # Every request must get the current frame, never a cached one.
+        self.send_header("Cache-Control", "no-store")
+        if timestamp is not None:
+            self.send_header("X-Frame-Timestamp", timestamp)
+        self.end_headers()
+        self.wfile.write(jpeg)
 
     def log_message(self, format_string, *args):
         # One line per POST is useful; one line per poll is noise.
@@ -557,6 +808,9 @@ def main():
             + "'. It must be lowercase snake_case, e.g. corridor_a."
         )
         return 1
+
+    if arguments.list_cameras:
+        return list_cameras()
 
     source = resolve_source(arguments)
 
@@ -605,6 +859,12 @@ def main():
             + str(arguments.http_port)
             + "/positions"
         )
+        if arguments.preview_width > 0:
+            print(
+                "Serving annotated frames on http://0.0.0.0:"
+                + str(arguments.http_port)
+                + "/frame.jpg"
+            )
 
     print(
         "Camera "
@@ -651,7 +911,7 @@ def main():
             last_sample_at = now
 
             try:
-                count, confidence, people = detect_people(
+                count, confidence, people, detections = detect_people(
                     model, frame, arguments.conf, homography
                 )
             except Exception as error:
@@ -677,6 +937,29 @@ def main():
                 latest_state["people"] = people
             finally:
                 state_lock.release()
+
+            if arguments.preview_width > 0:
+                try:
+                    jpeg = build_preview(
+                        frame,
+                        detections,
+                        arguments.camera_id,
+                        arguments.preview_width,
+                        arguments.preview_quality,
+                    )
+                except Exception as error:
+                    # Drawing the preview must never take the pipeline with
+                    # it; the counts matter and the picture does not.
+                    print("Preview failed: " + str(error))
+                    jpeg = None
+
+                if jpeg is not None:
+                    preview_lock.acquire()
+                    try:
+                        latest_preview["jpeg"] = jpeg
+                        latest_preview["timestamp"] = timestamp
+                    finally:
+                        preview_lock.release()
 
             payload = {
                 "room_id": arguments.room_id,
