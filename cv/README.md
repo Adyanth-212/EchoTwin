@@ -35,18 +35,58 @@ straight to `cv2.VideoCapture`.
 
 | Setup | Flag |
 |---|---|
+| **iPhone via Continuity Camera** (macOS) | `--camera-index <n>` |
 | Phone over USB via Iriun | `--camera-index 2` |
 | Laptop webcam | `--camera-index 0` |
 | Android phone running **IP Webcam** | `--source http://192.168.1.31:8080/video` |
 | Anything streaming RTSP | `--source rtsp://192.168.1.31:8554/live` |
 
-For phones mounted as fixed CCTV cameras, use the URL form. Open the URL in a
-browser on the laptop first — if it does not play there, OpenCV will not open
-it either.
+Find out which index is which:
 
-Android has the easiest path (IP Webcam, free, streams MJPEG over HTTP). On
-iPhone you need an app that exposes RTSP or MJPEG — Larix Broadcaster or IP
-Camera Lite — or plug it in and use Iriun as a normal device index.
+```bash
+python3 producer.py --list-cameras
+```
+
+That probes every index, reports the resolution each one returns, and on
+macOS also lists the camera names the system knows about — which is how you
+spot the iPhone. OpenCV has no cross-platform way to name a device, so
+without this it is guesswork.
+
+### iPhone via Continuity Camera (no app needed)
+
+The best-quality option if any camera laptop is a Mac. macOS presents the
+iPhone as an ordinary capture device, so the producer needs no changes — just
+the right index.
+
+Requirements: macOS 13+, iPhone XR or later on iOS 16+, the **same Apple ID
+with two-factor on both**, Wi-Fi and Bluetooth on, and the phone **locked,
+stationary, and mounted in landscape with the rear camera facing out**. It
+will not engage while the phone is unlocked in your hand. Only one Mac can
+claim a given iPhone at a time.
+
+Two things that will waste your time if you do not know them:
+
+- **The camera permission prompt is for your terminal app, not for Python.**
+  Run the producer from a real terminal window and approve it. Over SSH, or
+  without a GUI session, opening the camera fails silently.
+- **The index is not stable.** Continuity Camera appears and disappears as
+  the phone connects, which shifts the other indices. Re-run
+  `--list-cameras` if a previously working index stops opening.
+
+AirPlay is not a capture source, and QuickTime's "New Movie Recording" claims
+the device exclusively — OpenCV cannot open a camera QuickTime is holding, so
+close it.
+
+### Phones over the network
+
+For phones mounted as fixed CCTV cameras on a non-Mac laptop, use the URL
+form. Open the URL in a browser on the laptop first — if it does not play
+there, OpenCV will not open it either.
+
+Android has the easiest path: **IP Webcam**, free, streams MJPEG over HTTP.
+On iPhone, if Continuity Camera is not an option, you need an app that
+exposes RTSP or MJPEG — Larix Broadcaster or IP Camera Lite — or plug it in
+and use Iriun as a normal device index.
 
 ## Run
 
@@ -144,6 +184,32 @@ field for positions. The dashboard reads it through the Vite proxy — set
 `VITE_CAM1_HOST` / `VITE_CAM2_HOST` in `frontend/.env` to point at the camera
 laptops.
 
+## Seeing what the camera sees
+
+The producer serves the frame it **actually ran inference on**, with the
+detection boxes drawn, at `GET /frame.jpg` on the same port as the positions:
+
+```
+http://<camera laptop>:8010/frame.jpg
+```
+
+The dashboard shows both cameras in a "Camera views" panel. Each box is
+labelled with its confidence and, once calibrated, the floor coordinates that
+detection produced, plus a dot on the point used for positioning — so a bad
+calibration is visible in the picture rather than only as figures standing in
+the wrong place in the 3D room.
+
+This is the frame the model saw, not a fresh grab, so the boxes always match
+the numbers beside them.
+
+Frames are polled by the dashboard at 2 fps and scaled to `--preview-width`
+(default 640) at `--preview-quality` (default 70). On a phone hotspot that is
+roughly 20 KB/s per camera. `--preview-width 0` turns the preview off
+entirely if the network is struggling; counts and positions keep working.
+
+Note that this puts a live view of identifiable people on a dashboard someone
+may be screen-sharing — worth a thought about where the cameras point.
+
 ## The camera index
 
 The camera is an ordinary OpenCV device index. Iriun Webcam over USB appears
@@ -177,6 +243,9 @@ Re-run with --camera-index <one of those>.
 | `--rect-depth` | `4.6` | Depth in metres of the calibration rectangle |
 | `--rect-center-x` | `0` | X offset of the rectangle's centre |
 | `--rect-center-z` | `0` | Z offset of the rectangle's centre |
+| `--list-cameras` | off | List indices that open, with names on macOS, then exit |
+| `--preview-width` | `640` | Width of the annotated preview; `0` disables it |
+| `--preview-quality` | `70` | JPEG quality of the preview, 1-100 |
 
 ## What it does and does not do
 

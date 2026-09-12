@@ -280,6 +280,20 @@ from the backend is unaffected either way.
 
 See [`cv/README.md`](../cv/README.md) for calibration.
 
+### Camera views
+
+The **Camera views** panel shows the frame each producer actually ran
+inference on, with its detection boxes drawn — confidence, the floor
+coordinates that detection produced, and a dot on the point used to place it.
+
+This is how you tell whether YOLO is boxing people or boxing a coat rack. The
+counts and the figures in the 3D room look equally confident either way.
+
+Frames are polled at 2 fps rather than streamed: a stalled MJPEG stream
+freezes without saying so, whereas a failed request is unambiguous. **Pause
+feeds** stops the polling — they are the heaviest thing on the network here,
+so leave them off until someone asks to see them.
+
 ---
 
 ## Layout of the real room
