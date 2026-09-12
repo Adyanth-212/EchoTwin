@@ -53,7 +53,7 @@ pip install -r mocks/requirements.txt
 python mocks/mock_mqtt_publisher.py
 ```
 
-## frontend/ (owner: you)
+## frontend/ (owner: Adyanth)
 
 React + Three.js dashboard.
 
