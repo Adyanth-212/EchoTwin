@@ -30,7 +30,10 @@ SENSOR_RANGES = {
 
 def build_message(sensor_name):
     low, high = SENSOR_RANGES[sensor_name]
-    value = round(random.uniform(low, high), 2)
+    if sensor_name == "vibration_trip":
+        value = 1 if random.random() < 0.05 else 0
+    else:
+        value = round(random.uniform(low, high), 2)
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     message = {
         "node_id": NODE_ID,
