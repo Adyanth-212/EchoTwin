@@ -250,3 +250,41 @@ export function formatAgo(timestampMs, nowMs) {
   const hours = Math.floor(minutes / 60);
   return hours + "h ago";
 }
+
+// The CV producers serve each person's floor position from the camera
+// laptops themselves (cv/producer.py), proxied by Vite at these paths. A
+// feed that is not running simply contributes nobody.
+export const CAMERA_FEEDS = [
+  { id: "cam1", path: "/cam1" },
+  { id: "cam2", path: "/cam2" },
+];
+
+// Two cameras watching the same room see the same person twice. Detections
+// this close together on the floor are treated as one person.
+export const PERSON_MERGE_RADIUS_M = 0.7;
+
+// Drop a person this long after the camera that saw them last reported, so a
+// producer that dies does not leave figures standing in the room forever.
+export const PERSON_TTL_MS = 6000;
+
+// Same contract as fetchJson, but for the camera feeds, which live on a
+// different origin and are expected to be absent most of the time.
+export async function fetchCamera(path, options) {
+  const settings = options || {};
+  const timeoutMs = settings.timeoutMs || 3000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(path, {
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) {
+      throw new Error("HTTP " + response.status);
+    }
+    return await response.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}

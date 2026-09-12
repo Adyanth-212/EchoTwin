@@ -87,6 +87,29 @@ export default function OccupancyPanel(props) {
   const cameras = Object.keys(props.cameraEvents || {});
   const hasCameraData = cameras.length > 0;
 
+  // Positions come straight from the producers rather than through the
+  // backend, so they can be present when the fused count is not, and vice
+  // versa. Report what each feed is actually doing.
+  const tracked = props.tracked || { people: [], feeds: {} };
+  const trackedPeople = tracked.people || [];
+
+  let confirmedCount = 0;
+  for (let index = 0; index < trackedPeople.length; index += 1) {
+    const person = trackedPeople[index];
+    if (person.cameras && person.cameras.length > 1) {
+      confirmedCount += 1;
+    }
+  }
+
+  const uncalibratedFeeds = [];
+  const feedIds = Object.keys(tracked.feeds || {});
+  for (let index = 0; index < feedIds.length; index += 1) {
+    const feed = tracked.feeds[feedIds[index]];
+    if (feed && feed.online && !feed.calibrated) {
+      uncalibratedFeeds.push(feedIds[index]);
+    }
+  }
+
   const historyPoints = DEMO_MODE
     ? (props.liveHistory && props.liveHistory.occupancy_count) || []
     : cvHistory.points.map((point) => ({
@@ -133,6 +156,25 @@ export default function OccupancyPanel(props) {
       ) : (
         <p className="panel-empty">No per-camera events received yet.</p>
       )}
+
+      {trackedPeople.length > 0 ? (
+        <p className="occupancy-tracked">
+          <span className="occupancy-tracked-dot" />
+          {trackedPeople.length === 1
+            ? "1 person located in the 3D room"
+            : trackedPeople.length + " people located in the 3D room"}
+          {confirmedCount > 0
+            ? " · " + confirmedCount + " seen by both cameras"
+            : null}
+        </p>
+      ) : uncalibratedFeeds.length > 0 ? (
+        <p className="panel-empty">
+          {uncalibratedFeeds.join(" and ")}
+          {uncalibratedFeeds.length === 1 ? " is" : " are"} running but not
+          calibrated — run the producer with --calibrate to place people in
+          the 3D room.
+        </p>
+      ) : null}
 
       {historyPoints.length >= 2 ? (
         <div style={{ marginTop: 14 }}>

@@ -5,6 +5,7 @@ import { SENSOR_META, formatValue } from "../config.js";
 import RoomShell from "./RoomShell.jsx";
 import SensorMarker from "./SensorMarker.jsx";
 import EquipmentMarker from "./EquipmentMarker.jsx";
+import PeopleLayer from "./PeopleLayer.jsx";
 
 // The 3D twin is the primary view of the room, driven by the same fused
 // WebSocket state as every panel on the page — not a decoration running off
@@ -63,6 +64,7 @@ export default function RoomScene(props) {
   const room = props.room;
   const sensors = (room && room.sensors) || {};
   const status = room ? room.status : null;
+  const peopleCount = (props.people || []).length;
 
   return (
     <div className="scene-wrap">
@@ -78,6 +80,8 @@ export default function RoomScene(props) {
         <directionalLight position={[-5, 3, -4]} intensity={0.25} />
 
         <RoomShell status={status} />
+
+        <PeopleLayer people={props.people} />
 
         {MARKERS.map((marker) => {
           if (marker.kind === "equipment") {
@@ -129,6 +133,15 @@ export default function RoomScene(props) {
           />{" "}
           equipment
         </span>
+        {peopleCount > 0 ? (
+          <span>
+            <span
+              className="legend-swatch"
+              style={{ background: "#7ee8dc", borderRadius: "50%" }}
+            />{" "}
+            {peopleCount === 1 ? "1 person" : peopleCount + " people"}
+          </span>
+        ) : null}
       </div>
 
       <div className="scene-hint">

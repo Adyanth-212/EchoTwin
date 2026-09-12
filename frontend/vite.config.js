@@ -14,6 +14,30 @@ export default defineConfig(({ mode }) => {
   const httpTarget = "http://" + backendHost;
   const wsTarget = "ws://" + backendHost;
 
+  // Each CV producer serves the floor positions of the people it can see
+  // straight from the camera laptop (see cv/producer.py). Those do not go
+  // through the backend: its /cv schema is fixed and has no room for them,
+  // and that file belongs to another branch. Proxying them here keeps the
+  // browser same-origin, exactly like the backend calls.
+  const cameraHosts = {
+    "/cam1": env.VITE_CAM1_HOST || "localhost:8010",
+    "/cam2": env.VITE_CAM2_HOST || "localhost:8011",
+  };
+
+  const cameraProxy = {};
+  for (const prefix of Object.keys(cameraHosts)) {
+    cameraProxy[prefix] = {
+      target: "http://" + cameraHosts[prefix],
+      changeOrigin: true,
+      rewrite: (path) => path.replace(new RegExp("^" + prefix), ""),
+      // A camera laptop that is not running is the normal case during
+      // development; do not let it take the dev server's logs with it.
+      configure: (proxy) => {
+        proxy.on("error", () => {});
+      },
+    };
+  }
+
   return {
     plugins: [react()],
     server: {
@@ -31,6 +55,7 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           ws: true,
         },
+        ...cameraProxy,
       },
     },
   };
