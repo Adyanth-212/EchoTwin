@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useGLTF } from "@react-three/drei";
 import { Box3, DoubleSide, Plane, Vector3 } from "three";
 import { ROOM, ROOM_MODEL } from "../roomLayout.js";
@@ -11,7 +11,8 @@ import { ROOM, ROOM_MODEL } from "../roomLayout.js";
 // gets it close enough to be recognisable on the first load. The manual
 // offsets in roomLayout.js then nudge it the rest of the way by hand.
 export default function RoomModel(props) {
-  const gltf = useGLTF(ROOM_MODEL.url, "/draco/");
+  const config = ROOM_MODEL.mesh;
+  const gltf = useGLTF(config.url, "/draco/");
   const groupRef = useRef(null);
 
   // The GLTF scene graph is shared across every component that loads the same
@@ -19,7 +20,7 @@ export default function RoomModel(props) {
   const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
 
   const fit = useMemo(() => {
-    if (!ROOM_MODEL.autoFit) {
+    if (!config.autoFit) {
       return { scale: 1, center: new Vector3(0, 0, 0), minY: 0 };
     }
 
@@ -35,18 +36,18 @@ export default function RoomModel(props) {
     const scale = Math.min(widthRatio, depthRatio);
 
     return { scale: scale, center: center, minY: bounds.min.y };
-  }, [scene]);
+  }, [scene, config.autoFit]);
 
   // Everything above clipHeight is sliced away, which turns a sealed scan
   // into a dollhouse you can look down into. Culling back faces instead
   // would hide the near wall but take the floor with it, since the floor
   // faces the camera too.
   const clippingPlanes = useMemo(() => {
-    if (ROOM_MODEL.clipHeight === null || ROOM_MODEL.clipHeight === undefined) {
+    if (config.clipHeight === null || config.clipHeight === undefined) {
       return [];
     }
-    return [new Plane(new Vector3(0, -1, 0), ROOM_MODEL.clipHeight)];
-  }, []);
+    return [new Plane(new Vector3(0, -1, 0), config.clipHeight)];
+  }, [config.clipHeight]);
 
   useLayoutEffect(() => {
     scene.traverse((child) => {
@@ -62,8 +63,14 @@ export default function RoomModel(props) {
     });
   }, [scene, clippingPlanes]);
 
-  const scale = fit.scale * (ROOM_MODEL.scale || 1);
-  const offset = ROOM_MODEL.offset || [0, 0, 0];
+  useEffect(() => {
+    if (props.onLoad) {
+      props.onLoad();
+    }
+  }, [props.onLoad]);
+
+  const scale = fit.scale * (config.scale || 1);
+  const offset = config.offset || [0, 0, 0];
 
   // Centre horizontally on the origin and drop the floor of the scan onto
   // y = 0, so the marker positions in roomLayout.js still mean what they say.
@@ -73,7 +80,27 @@ export default function RoomModel(props) {
     -fit.center.z * scale + offset[2],
   ];
 
-  const rotation = [0, ((ROOM_MODEL.rotationY || 0) * Math.PI) / 180, 0];
+  const rotation = [0, ((config.rotationY || 0) * Math.PI) / 180, 0];
+
+  function handleSurfaceClick(event) {
+    if (!props.onSurfaceClick) {
+      return;
+    }
+
+    event.stopPropagation();
+    const point = event.point.clone();
+
+    // Lift the marker a little along the clicked triangle's world-space
+    // normal so its geometry does not disappear inside the scanned surface.
+    if (event.face && event.face.normal) {
+      const normal = event.face.normal
+        .clone()
+        .transformDirection(event.object.matrixWorld);
+      point.addScaledVector(normal, 0.16);
+    }
+
+    props.onSurfaceClick([point.x, point.y, point.z]);
+  }
 
   return (
     <group ref={groupRef}>
@@ -82,6 +109,7 @@ export default function RoomModel(props) {
         scale={scale}
         position={position}
         rotation={rotation}
+        onClick={props.onSurfaceClick ? handleSurfaceClick : undefined}
       />
     </group>
   );

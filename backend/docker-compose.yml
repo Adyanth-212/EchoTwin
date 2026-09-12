@@ -1,15 +1,16 @@
 services:
   postgres:
-    image: timescale/timescaledb:latest-pg16
+    image: timescale/timescaledb:latest-pg17
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-echotwin}
       POSTGRES_USER: ${POSTGRES_USER:-echotwin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT_FORWARD:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-echotwin} -d ${POSTGRES_DB:-echotwin}"]
       interval: 5s
@@ -20,7 +21,7 @@ services:
     image: eclipse-mosquitto:latest
     restart: unless-stopped
     ports:
-      - "1883:1883"
+      - "${MQTT_PORT_FORWARD:-1883}:1883"
     volumes:
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
     healthcheck:
@@ -41,7 +42,7 @@ services:
       POSTGRES_HOST: postgres
       MQTT_BROKER_HOST: mosquitto
     ports:
-      - "8000:8000"
+      - "${API_PORT_FORWARD:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
