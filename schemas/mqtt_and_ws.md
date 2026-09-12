@@ -27,7 +27,7 @@ Topic: `echotwin/sensors/<node_id>`
 
 Field notes:
 
-- `node_id` — identifies the physical ESP32 board, e.g. `"esp32_1"`.
+- `node_id` — identifies the physical ESP32 board, e.g. `"node_1"`.
 - `sensor` — one of the fixed sensor names below. One MQTT message reports
   exactly one sensor reading (the ESP32 publishes one message per sensor
   per sample cycle, not one combined blob).

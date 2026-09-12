@@ -23,6 +23,24 @@ The tools require only `pyserial` for capture and `paho-mqtt` for later
 replay. Capturing and analyzing data require no network connection after
 installation.
 
+## Live delivery through Tailscale
+
+The ESP32 does not need Tailscale or working Wi-Fi. This laptop can act as a
+USB Serial-to-MQTT gateway while still keeping a full local capture. Close
+PlatformIO and Arduino Serial Monitor first because only one process can open
+COM10, then run:
+
+```powershell
+Set-Location "C:\Users\vijay\Documents\EchoTwin\esp32-firmware"
+
+.\.venv\Scripts\python.exe .\tools\serial_to_mqtt.py --port COM10 --baud 115200 --broker-host <ADITYA_TAILSCALE_IP> --broker-port 1883 --node-id node_1 --label review2_live
+```
+
+Look for `[SERIAL CONNECTED]`, `[MQTT CONNECTED]`, and increasing `queued` and
+`acked` counts. Every valid sample is flushed to timestamped JSONL and CSV
+files under `data\`. Only the eight allowed MQTT sensor names are published;
+the raw MPU axes and SW-420 diagnostics remain available in the local capture.
+
 ## Review 2 procedure
 
 1. Wire and power the ESP32 sensor node. Use SDA GPIO21, SCL GPIO22, and the
