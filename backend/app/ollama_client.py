@@ -23,6 +23,7 @@ def get_ai_advice(status):
                 "model": config.OLLAMA_MODEL,
                 "prompt": prompt,
                 "stream": False,
+                "think": False,
             },
             timeout=config.OLLAMA_TIMEOUT_SECONDS,
         )
