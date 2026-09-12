@@ -52,8 +52,27 @@ export default function EquipmentMarker(props) {
   const surfaceUnit = SENSOR_META.surface_temp.unit;
   const vibrationUnit = SENSOR_META.vibration_magnitude.unit;
 
+  function handleClick(event) {
+    if (props.onSelect) {
+      event.stopPropagation();
+      props.onSelect(marker.id);
+    }
+  }
+
   return (
-    <group position={marker.position}>
+    <group position={marker.position} onClick={handleClick}>
+      {props.selected ? (
+        <mesh>
+          <boxGeometry args={[1.08, 0.74, 0.58]} />
+          <meshBasicMaterial
+            color="#ffffff"
+            transparent
+            opacity={0.72}
+            wireframe
+            depthWrite={false}
+          />
+        </mesh>
+      ) : null}
       <MarkerStem height={marker.position[1]} color={color} />
       {marker.model ? (
         <ModelFallback fallback={<EquipmentBox />}>

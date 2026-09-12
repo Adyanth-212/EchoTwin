@@ -43,22 +43,35 @@ export const ROOM = { width: 6, depth: 4.6, height: 3 };
  */
 export const ROOM_MODEL = {
   enabled: true,
-  url: import.meta.env.VITE_ROOM_MODEL || "/room.glb",
+  defaultMode:
+    import.meta.env.VITE_ROOM_MODEL_MODE === "gaussian" ? "gaussian" : "mesh",
 
-  autoFit: true,
-  // Extra multiplier applied after autoFit. 1 = leave it alone.
-  scale: 1,
-  // Metres, applied after autoFit centring.
-  offset: [0, 0, 0],
-  // Degrees about the vertical axis. Scans rarely come out facing the way
-  // you want; this is usually the only value you need to change.
-  rotationY: 0,
+  mesh: {
+    url:
+      import.meta.env.VITE_ROOM_MESH ||
+      import.meta.env.VITE_ROOM_MODEL ||
+      "/scans/table-mesh.glb",
+    autoFit: true,
+    // Extra multiplier applied after autoFit. 1 = leave it alone.
+    scale: 1,
+    // Metres, applied after autoFit centring.
+    offset: [0, 0, 0],
+    // Degrees about the vertical axis.
+    rotationY: 0,
+    // Dollhouse cutaway for the triangle mesh. null shows everything.
+    clipHeight: 2.2,
+  },
 
-  // Dollhouse cutaway: slice the scan off above this height in metres so
-  // you look down into the room. A scan is a sealed opaque box otherwise,
-  // and every marker inside it is hidden behind a wall. Raise it to see
-  // more wall, lower it to see more floor; null shows the whole scan.
-  clipHeight: 2.2,
+  gaussian: {
+    url: import.meta.env.VITE_ROOM_SPLAT || "/scans/table-gaussian.ply",
+    // Scaniverse Gaussian exports use OpenCV orientation. The renderer flips
+    // X by 180 degrees, then applies these room-alignment controls.
+    scale: 0.55,
+    offset: [0, 0, 0],
+    rotationY: 0,
+    // Higher values produce a slightly sharper photographic reconstruction.
+    focalAdjustment: 2,
+  },
 };
 
 /* Each marker may carry an optional `model` — a path under public/ to a GLB
