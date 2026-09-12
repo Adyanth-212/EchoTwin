@@ -4,6 +4,7 @@ import useRoomStatus from "./hooks/useRoomStatus.js";
 import useRoomSuggestions from "./hooks/useRoomSuggestions.js";
 import useAiAdvice from "./hooks/useAiAdvice.js";
 import useNotifications from "./hooks/useNotifications.js";
+import usePeoplePositions from "./hooks/usePeoplePositions.js";
 
 import StatusHeader from "./components/StatusHeader.jsx";
 import RoomScene from "./components/RoomScene.jsx";
@@ -83,6 +84,7 @@ function Dashboard(props) {
   const { roomId, feed, room, history, changedAt, suggestionState } = props;
   const notifications = props.notifications;
   const advice = useAiAdvice(roomId);
+  const tracked = usePeoplePositions();
 
   const cameraCounts = useMemo(() => {
     const counts = {};
@@ -123,13 +125,18 @@ function Dashboard(props) {
 
       <div className="app-main">
         <div className="app-left">
-          <RoomScene room={room} cameraCounts={cameraCounts} />
+          <RoomScene
+            room={room}
+            cameraCounts={cameraCounts}
+            people={tracked.people}
+          />
           <SensorGrid room={room} history={history} changedAt={changedAt} />
           <OccupancyPanel
             roomId={roomId}
             room={room}
             cameraEvents={props.cameraEvents.byCamera}
             liveHistory={history}
+            tracked={tracked}
           />
         </div>
 

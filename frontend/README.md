@@ -210,6 +210,78 @@ already delivers the pitch.
 
 ---
 
+## The 3D room
+
+By default the twin draws a simple box room from the dimensions in
+`src/roomLayout.js`. Drop a phone scan in and it draws the real one.
+
+### Using a real scan
+
+1. Scan the room with **Polycam**, **Scaniverse**, or **RoomPlan** (iPhone
+   Pro / iPad Pro only, and the cleanest option because LiDAR gives correct
+   real-world scale). Walk slowly, keep some overlap, get the floor.
+2. Export **GLB**. Draco compression is fine — the decoder is served locally
+   from `public/draco/`, so nothing is fetched from a CDN at runtime.
+3. Save it as `frontend/public/room.glb`, or point `VITE_ROOM_MODEL` at
+   another path under `public/`.
+4. Reload. If it looks wrong, adjust `ROOM_MODEL` in `src/roomLayout.js`.
+
+If the file is missing, malformed or the wrong format, the box room is drawn
+instead and everything else works normally. There is no state in which a bad
+scan breaks the dashboard.
+
+Test the loader before you have a scan:
+
+```bash
+echo "VITE_ROOM_MODEL=/room-sample.glb" >> .env
+```
+
+### Fixing up a scan
+
+Everything is in the `ROOM_MODEL` block in `src/roomLayout.js`:
+
+| Field | What it does |
+|---|---|
+| `autoFit` | Measures the mesh and fits its footprint to `ROOM`, dropping the floor to y=0. Leave this on — a photogrammetry export arrives at an arbitrary scale, origin and orientation. |
+| `rotationY` | Degrees. Usually the only thing you need to change: scans rarely come out facing the way you want. |
+| `scale` | Extra multiplier after autoFit. Only needed if the room reads as the wrong size next to the markers. |
+| `offset` | Metres, after autoFit centring. |
+| `clipHeight` | Slices the scan above this height so you can look down into it. Without it a scan is a sealed opaque box and every marker inside is hidden. `null` shows the whole thing. |
+
+Marker positions in `MARKERS` are in metres in the same frame, so once the
+scan is aligned the sensor node and the AC unit sit where they really are.
+Each marker can also carry a `model` pointing at its own GLB under `public/`.
+
+---
+
+## People in the room
+
+With the CV producers calibrated, the twin shows **where** people are, not
+just how many. Each detection becomes a figure standing at its real position
+on the floor, updating about once a second and easing between positions so it
+glides rather than teleports.
+
+Someone visible to both cameras gets a second ring and a lighter colour —
+that detection is confirmed by two independent views rather than being one
+camera's guess.
+
+This data does **not** come through the backend. Its `/cv` schema is fixed and
+has no field for positions, so each producer serves them from the camera
+laptop itself and Vite proxies them:
+
+```
+browser ──/cam1/positions──▶ Vite ──▶ http://<VITE_CAM1_HOST>/positions
+browser ──/cam2/positions──▶ Vite ──▶ http://<VITE_CAM2_HOST>/positions
+```
+
+A camera laptop that is off, unreachable or uncalibrated contributes nobody,
+and the occupancy panel says which of those it is. The fused occupancy count
+from the backend is unaffected either way.
+
+See [`cv/README.md`](../cv/README.md) for calibration.
+
+---
+
 ## Layout of the real room
 
 `src/roomLayout.js` has an `EDIT ME` block at the top holding the room
