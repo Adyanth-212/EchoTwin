@@ -53,6 +53,12 @@ function cameraRows(marker, sensors, cameraCounts) {
   ];
 }
 
+// Per-material clipping planes are off by default in three, and the scanned
+// room's dollhouse cutaway needs them.
+function handleCreated(state) {
+  state.gl.localClippingEnabled = true;
+}
+
 export default function RoomScene(props) {
   const room = props.room;
   const sensors = (room && room.sensors) || {};
@@ -63,7 +69,8 @@ export default function RoomScene(props) {
       <Canvas
         className="scene-canvas"
         dpr={[1, 1.5]}
-        camera={{ position: [5.4, 4.4, 6.2], fov: 46 }}
+        camera={{ position: [4.6, 3.9, 5.4], fov: 46 }}
+        onCreated={handleCreated}
       >
         <color attach="background" args={["#0e1320"]} />
         <ambientLight intensity={0.75} />

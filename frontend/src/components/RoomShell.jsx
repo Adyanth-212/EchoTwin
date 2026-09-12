@@ -1,6 +1,8 @@
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { Color, DoubleSide } from "three";
-import { ROOM } from "../roomLayout.js";
+import { ROOM, ROOM_MODEL } from "../roomLayout.js";
+import ModelFallback from "./ModelFallback.jsx";
+import RoomModel from "./RoomModel.jsx";
 
 const BASE_FLOOR = "#131a2a";
 const BASE_WALL = "#1a2236";
@@ -23,14 +25,43 @@ function washed(baseHex, status, amount) {
   return base.lerp(new Color(tint), amount);
 }
 
-export default function RoomShell(props) {
+// The status tint has to work on a photogrammetry scan too, where the surface
+// colours are photographic and must not be recoloured. So the wash is a
+// separate translucent layer just above the floor plus a faint tinted light,
+// rather than a material change — it reads the same over both the box room
+// and a real scan.
+function StatusWash(props) {
+  const tint = STATUS_TINT[props.status];
+  if (!tint) {
+    return null;
+  }
+
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+        <planeGeometry args={[ROOM.width, ROOM.depth]} />
+        <meshBasicMaterial
+          color={tint}
+          transparent
+          opacity={0.2}
+          depthWrite={false}
+        />
+      </mesh>
+      <hemisphereLight args={[tint, "#0e1320", 0.42]} />
+    </group>
+  );
+}
+
+// Built-in geometry. Used on its own when there is no scan, and as the
+// fallback whenever a scan fails to load.
+function BoxRoom(props) {
   const status = props.status;
 
-  const floorColor = useMemo(
-    () => washed(BASE_FLOOR, status, 0.1),
-    [status]
-  );
-  const wallColor = useMemo(() => washed(BASE_WALL, status, 0.07), [status]);
+  // Only a whisper of tint in the materials themselves — StatusWash above
+  // carries the actual status signal, and it has to work over a scan whose
+  // surfaces are photographic and must not be recoloured.
+  const floorColor = useMemo(() => washed(BASE_FLOOR, status, 0.04), [status]);
+  const wallColor = useMemo(() => washed(BASE_WALL, status, 0.03), [status]);
 
   const halfWidth = ROOM.width / 2;
   const halfDepth = ROOM.depth / 2;
@@ -93,6 +124,31 @@ export default function RoomShell(props) {
         position={[0, 0.01, 0]}
         scale={[1, 1, ROOM.depth / ROOM.width]}
       />
+    </group>
+  );
+}
+
+export default function RoomShell(props) {
+  const status = props.status;
+  const boxRoom = <BoxRoom status={status} />;
+
+  if (!ROOM_MODEL.enabled || !ROOM_MODEL.url) {
+    return (
+      <group>
+        {boxRoom}
+        <StatusWash status={status} />
+      </group>
+    );
+  }
+
+  return (
+    <group>
+      <ModelFallback fallback={boxRoom}>
+        <Suspense fallback={boxRoom}>
+          <RoomModel />
+        </Suspense>
+      </ModelFallback>
+      <StatusWash status={status} />
     </group>
   );
 }
