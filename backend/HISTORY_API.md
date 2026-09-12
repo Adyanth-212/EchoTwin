@@ -62,12 +62,11 @@ any event in the interval was unusual.
 
 ## Frontend examples
 
-When the frontend runs on Akshay's tailnet, use the shared MagicDNS backend
-hostname:
+On the current shared Tailscale network, use the backend Mac's Tailscale IP:
 
 ```text
-http://sanjays-macbook-air.tail833b77.ts.net:8000/history/rooms
-http://sanjays-macbook-air.tail833b77.ts.net:8000/history/sensors?room_id=corridor_a&sensor=temperature&bucket=5m
+http://100.93.145.13:8000/history/rooms
+http://100.93.145.13:8000/history/sensors?room_id=corridor_a&sensor=temperature&bucket=5m
 ```
 
 The top-level response includes `from`, `to`, `bucket`, `point_count`, and
