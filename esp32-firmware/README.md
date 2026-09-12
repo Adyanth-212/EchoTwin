@@ -23,6 +23,7 @@ esp32-firmware/
 │   ├── serial_logger.py
 │   ├── analyze_calibration.py
 │   ├── replay_to_mqtt.py
+│   ├── serial_to_mqtt.py
 │   ├── requirements.txt
 │   └── tests/
 ├── data/                  # ignored local captures
@@ -128,6 +129,19 @@ Independently of the 7.5-second MQTT cycle, the firmware prints one line per
 second beginning with `[SERIAL_DATA]`. Its JSON contains device uptime rather
 than invented ESP32 wall-clock time; the offline logger adds authoritative UTC
 `host_timestamp` values on the laptop. Missing measurements are `null`.
+
+For live Review 2 delivery, keep the ESP32 offline and use this laptop as the
+USB Serial-to-Tailscale gateway. Close PlatformIO and Arduino Serial Monitor,
+then run the bridge with Aditya's current Tailscale address:
+
+```powershell
+.\.venv\Scripts\python.exe .\tools\serial_to_mqtt.py --port COM10 --baud 115200 --broker-host <ADITYA_TAILSCALE_IP> --broker-port 1883 --node-id node_1 --label review2_live
+```
+
+The bridge saves every valid structured record to JSONL and CSV before
+publishing the contract-approved fields to `echotwin/sensors/node_1`. MQTT
+outages never stop local Serial capture; replay the saved JSONL later if any
+live messages were missed.
 
 ## Exact test sequence at the venue
 

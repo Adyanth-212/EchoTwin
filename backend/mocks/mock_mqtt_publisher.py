@@ -13,7 +13,7 @@ import paho.mqtt.client as mqtt
 
 BROKER_HOST = "localhost"
 BROKER_PORT = 1883
-NODE_ID = "esp32_1"
+NODE_ID = "node_1"
 PUBLISH_INTERVAL_SECONDS = 5
 
 SENSOR_RANGES = {
