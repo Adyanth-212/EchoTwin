@@ -50,13 +50,18 @@ def collect(room_id, now, settings):
     from app.maintenance.evaluator import summarize
     from app.anomaly import evaluate_anomaly
     with engine.connect() as connection:
+        # All queries use the same arrival cutoff. A publication can land between
+        # queries; it belongs to the next review, not a negative-age stale alert.
         rows = connection.execute(text("""SELECT time, sensor, value FROM sensor_readings
-            WHERE room_id=:room AND time>=:start AND time<=:now ORDER BY time"""),
+            WHERE room_id=:room AND time>=:start AND time<=:now
+            AND (received_at IS NULL OR received_at<=:now) ORDER BY time"""),
             {"room": room_id, "start": now - timedelta(seconds=settings.window_seconds), "now": now}).mappings().all()
         latest = connection.execute(text("""SELECT DISTINCT ON (sensor) sensor, time, value, received_at
-            FROM sensor_readings WHERE room_id=:room ORDER BY sensor,time DESC,id DESC"""), {"room": room_id}).mappings().all()
+            FROM sensor_readings WHERE room_id=:room AND (received_at IS NULL OR received_at<=:now)
+            ORDER BY sensor,time DESC,id DESC"""), {"room": room_id, "now": now}).mappings().all()
         cameras = connection.execute(text("""SELECT DISTINCT ON (camera_id) camera_id,time,received_at,occupancy
-            FROM cv_events WHERE room_id=:room ORDER BY camera_id,time DESC,id DESC"""), {"room": room_id}).mappings().all()
+            FROM cv_events WHERE room_id=:room AND (received_at IS NULL OR received_at<=:now)
+            ORDER BY camera_id,time DESC,id DESC"""), {"room": room_id, "now": now}).mappings().all()
     metrics = summarize(rows, {row["sensor"]: row for row in latest}, now, settings)
     camera_lookup = {row["camera_id"]: row for row in cameras}
     camera_metrics = {}
