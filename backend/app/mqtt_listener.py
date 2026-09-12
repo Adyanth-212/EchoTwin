@@ -1,9 +1,10 @@
-import datetime
+import json
 
 import paho.mqtt.client as mqtt
 from pydantic import ValidationError
 
 from app import config, db
+from app.fusion import build_room_status
 from app.schemas.mqtt import MQTTMessage
 
 
@@ -27,27 +28,24 @@ def on_message(client, userdata, msg):
         print("Unknown node_id, no room mapping configured:", message.node_id)
         return
 
-    reading_time = datetime.datetime.fromisoformat(
-        message.timestamp.replace("Z", "+00:00")
-    )
-    db.insert_sensor_reading(
-        message.node_id, room_id, message.sensor, message.value, reading_time
-    )
-
-    # TODO(Aditya): fusion/anomaly logic goes here.
-    # This is where a new sensor reading should feed into:
-    #   1. The Isolation Forest anomaly model (ml/) to get is_anomaly/score/top_features
-    #   2. The trend early-warning linear extrapolation over recent TimescaleDB rows
-    #   3. Combining the above into a room "status" (green/yellow/red)
-    # Once computed, build a WSMessage (app/schemas/ws.py) and broadcast it
-    # with app.ws_manager.manager.broadcast(...). Not implemented yet —
-    # this listener currently only validates and persists raw readings.
+    db.insert_sensor_reading(message, room_id, json.loads(raw_payload))
+    build_room_status(room_id, "sensor")
 
 
 def start_mqtt_listener():
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    client = mqtt.Client(
+        mqtt.CallbackAPIVersion.VERSION2,
+        client_id="echotwin-backend",
+    )
     client.on_connect = on_connect
     client.on_message = on_message
     client.connect(config.MQTT_BROKER_HOST, config.MQTT_BROKER_PORT, 60)
     client.loop_start()
     return client
+
+
+def stop_mqtt_listener(client):
+    if client is None:
+        return
+    client.loop_stop()
+    client.disconnect()

@@ -1,6 +1,7 @@
 # Matches schemas/mqtt_and_ws.md section 1 exactly. Do not change this
 # shape without updating that file and every other consumer listed there.
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel
@@ -23,4 +24,4 @@ class MQTTMessage(BaseModel):
     node_id: str
     sensor: SensorName
     value: float
-    timestamp: str
+    timestamp: datetime
