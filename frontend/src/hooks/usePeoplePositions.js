@@ -19,6 +19,12 @@ import { ROOM } from "../roomLayout.js";
 // unaffected.
 
 const POLL_INTERVAL_MS = 1000;
+// No camera running is the normal case in development and during setup.
+// Polling two dead endpoints every second floods the console with failed
+// requests — enough to push everything else out of the buffer and make the
+// page genuinely hard to debug. Back right off while every feed is down, and
+// return to full rate the moment one answers.
+const IDLE_POLL_INTERVAL_MS = 6000;
 
 function distance(a, b) {
   const dx = a.x - b.x;
@@ -189,9 +195,31 @@ export default function usePeoplePositions() {
       setPeople(identified);
     }
 
-    poll();
-    const timer = setInterval(poll, POLL_INTERVAL_MS);
-    return () => clearInterval(timer);
+    // A self-scheduling timeout rather than setInterval, so the delay can
+    // change with the feeds' state without tearing the effect down.
+    let timer = null;
+    let stopped = false;
+
+    async function loop() {
+      await poll();
+      if (stopped || !mountedRef.current) {
+        return;
+      }
+      const anyOnline = Object.keys(byCamera).length > 0;
+      timer = setTimeout(
+        loop,
+        anyOnline ? POLL_INTERVAL_MS : IDLE_POLL_INTERVAL_MS
+      );
+    }
+
+    loop();
+
+    return () => {
+      stopped = true;
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
   }, []);
 
   return { people: people, feeds: feedState };

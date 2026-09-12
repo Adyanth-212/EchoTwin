@@ -17,6 +17,11 @@ import { CAMERA_FEEDS, formatAgo } from "../config.js";
 // unreachable, and a camera can perfectly well be running while it is.
 
 const FRAMES_PER_SECOND = 2;
+// A camera laptop that is not running is the normal case, and polling it
+// twice a second fills the console with failed requests — enough to flush
+// everything else out of the buffer and make the page undebuggable. Back off
+// hard while a feed is down, and snap back the moment it answers.
+const OFFLINE_RETRY_MS = 5000;
 const ENABLED_KEY = "echotwin.camera.feeds";
 
 function readEnabled() {
@@ -46,11 +51,12 @@ function CameraTile(props) {
     if (!props.enabled) {
       return undefined;
     }
+    const period = isOnline === false ? OFFLINE_RETRY_MS : 1000 / FRAMES_PER_SECOND;
     const timer = setInterval(() => {
       setTick((value) => value + 1);
-    }, 1000 / FRAMES_PER_SECOND);
+    }, period);
     return () => clearInterval(timer);
-  }, [props.enabled]);
+  }, [props.enabled, isOnline]);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);

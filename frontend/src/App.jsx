@@ -4,6 +4,7 @@ import useRoomStatus from "./hooks/useRoomStatus.js";
 import useRoomSuggestions from "./hooks/useRoomSuggestions.js";
 import useAiAdvice from "./hooks/useAiAdvice.js";
 import useNotifications from "./hooks/useNotifications.js";
+import useHistory from "./hooks/useHistory.js";
 import usePeoplePositions from "./hooks/usePeoplePositions.js";
 
 import StatusHeader from "./components/StatusHeader.jsx";
@@ -14,6 +15,9 @@ import TrendBanner from "./components/TrendBanner.jsx";
 import SuggestionList from "./components/SuggestionList.jsx";
 import AskTwin from "./components/AskTwin.jsx";
 import HistoryPanel from "./components/HistoryPanel.jsx";
+import FusionChart from "./components/FusionChart.jsx";
+import StatusTimeline from "./components/StatusTimeline.jsx";
+import SensorSparkGrid from "./components/SensorSparkGrid.jsx";
 import OccupancyPanel, { useCameraEvents } from "./components/OccupancyPanel.jsx";
 import CameraFeed from "./components/CameraFeed.jsx";
 import ToastStack from "./components/ToastStack.jsx";
@@ -38,6 +42,7 @@ export default function App() {
   const feed = useRoomStatus();
   const room = feed.rooms[roomId] || null;
   const history = feed.historyByRoom[roomId] || {};
+  const statusHistory = feed.statusByRoom[roomId] || [];
   const changedAt = feed.changedAtByRoom[roomId] || {};
 
   const suggestionState = useRoomSuggestions(roomId, room);
@@ -75,6 +80,7 @@ export default function App() {
     room={room}
     history={history}
     changedAt={changedAt}
+    statusHistory={statusHistory}
     suggestionState={suggestionState}
     notifications={notifications}
     cameraEvents={cameraEvents}
@@ -86,6 +92,16 @@ function Dashboard(props) {
   const notifications = props.notifications;
   const advice = useAiAdvice(roomId);
   const tracked = usePeoplePositions();
+
+  // One request for every sensor at once — /history/sensors returns them all
+  // mixed when no sensor filter is given, and useHistory groups them. Feeding
+  // both the correlation chart and the small multiples from it avoids a
+  // request per channel.
+  const allHistory = useHistory({
+    roomId: roomId,
+    bucket: "5m",
+    enabled: !DEMO_MODE,
+  });
 
   const cameraCounts = useMemo(() => {
     const counts = {};
@@ -132,6 +148,11 @@ function Dashboard(props) {
             people={tracked.people}
           />
           <SensorGrid room={room} history={history} changedAt={changedAt} />
+          <FusionChart series={allHistory.series} liveHistory={history} />
+          <SensorSparkGrid
+            series={allHistory.series}
+            liveHistory={history}
+          />
           <CameraFeed />
           <OccupancyPanel
             roomId={roomId}
@@ -144,6 +165,7 @@ function Dashboard(props) {
 
         <div className="app-right">
           <AnomalyPanel room={room} />
+          <StatusTimeline entries={props.statusHistory} />
           <SuggestionList
             suggestions={suggestionState.suggestions}
             source={suggestionState.source}
