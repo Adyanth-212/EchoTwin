@@ -14,6 +14,12 @@ POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "changeme")
 MQTT_BROKER_HOST = os.environ.get("MQTT_BROKER_HOST", "localhost")
 MQTT_BROKER_PORT = int(os.environ.get("MQTT_BROKER_PORT", "1883"))
 MQTT_TOPIC = "echotwin/sensors/#"
+SENSOR_TIMESTAMP_MAX_AGE_SECONDS = int(
+    os.environ.get("SENSOR_TIMESTAMP_MAX_AGE_SECONDS", "300")
+)
+SENSOR_TIMESTAMP_FUTURE_TOLERANCE_SECONDS = int(
+    os.environ.get("SENSOR_TIMESTAMP_FUTURE_TOLERANCE_SECONDS", "60")
+)
 
 TAILSCALE_OLLAMA_URL = os.environ.get("TAILSCALE_OLLAMA_URL", "")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1:8b")
@@ -53,5 +59,6 @@ if not DATABASE_URL:
 # Fixed node_id -> room_id mapping. One sensor node per room in the
 # current hackathon build. Add entries here as more nodes come online.
 NODE_ID_TO_ROOM_ID = {
+    "node_1": "corridor_a",
     "esp32_1": "corridor_a",
 }

@@ -25,6 +25,12 @@ SELECT create_hypertable(
 CREATE INDEX IF NOT EXISTS sensor_readings_room_sensor_time_idx
 ON sensor_readings (room_id, sensor, time DESC);
 
+SELECT add_retention_policy(
+    'sensor_readings',
+    INTERVAL '30 days',
+    if_not_exists => TRUE
+);
+
 CREATE TABLE IF NOT EXISTS cv_events (
     id BIGSERIAL,
     time TIMESTAMPTZ NOT NULL,
@@ -45,6 +51,12 @@ SELECT create_hypertable(
 
 CREATE INDEX IF NOT EXISTS cv_events_room_camera_time_idx
 ON cv_events (room_id, camera_id, time DESC);
+
+SELECT add_retention_policy(
+    'cv_events',
+    INTERVAL '30 days',
+    if_not_exists => TRUE
+);
 
 CREATE TABLE IF NOT EXISTS room_status (
     room_id TEXT PRIMARY KEY,
