@@ -1,4 +1,4 @@
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { Color, DoubleSide } from "three";
 import { ROOM, ROOM_MODEL } from "../roomLayout.js";
 import ModelFallback from "./ModelFallback.jsx";
@@ -128,11 +128,63 @@ function BoxRoom(props) {
   );
 }
 
+// Check the scan is actually there before asking the loader for it.
+//
+// Without this, the default url points at a file that does not exist until
+// someone does the scan, the dev server answers with its index.html
+// fallback, and GLTFLoader throws trying to parse HTML. The error boundary
+// catches it and the box room appears - so the dashboard is fine - but every
+// single page load prints a red uncaught error and a React component stack.
+// That trains everyone to ignore the console, which is exactly when a real
+// error goes unnoticed. A HEAD request costs nothing and keeps the console
+// honest.
+function useModelAvailable(url) {
+  const [isAvailable, setIsAvailable] = useState(null);
+
+  useEffect(() => {
+    if (!url) {
+      setIsAvailable(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    async function probe() {
+      try {
+        const response = await fetch(url, { method: "HEAD" });
+        const contentType = response.headers.get("content-type") || "";
+        // An SPA fallback answers 200 with HTML, which is not a model.
+        const looksLikeModel =
+          response.ok && contentType.indexOf("text/html") === -1;
+        if (!cancelled) {
+          setIsAvailable(looksLikeModel);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setIsAvailable(false);
+        }
+      }
+    }
+
+    probe();
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+
+  return isAvailable;
+}
+
 export default function RoomShell(props) {
   const status = props.status;
   const boxRoom = <BoxRoom status={status} />;
 
-  if (!ROOM_MODEL.enabled || !ROOM_MODEL.url) {
+  const wanted = ROOM_MODEL.enabled && Boolean(ROOM_MODEL.url);
+  const isAvailable = useModelAvailable(wanted ? ROOM_MODEL.url : null);
+
+  // null means the probe has not answered yet - show the box room meanwhile
+  // rather than flashing empty space.
+  if (!wanted || isAvailable !== true) {
     return (
       <group>
         {boxRoom}
@@ -141,6 +193,8 @@ export default function RoomShell(props) {
     );
   }
 
+  // The boundary stays as the second line of defence: the file existing does
+  // not make it valid.
   return (
     <group>
       <ModelFallback fallback={boxRoom}>
