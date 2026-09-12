@@ -60,5 +60,4 @@ if not DATABASE_URL:
 # current hackathon build. Add entries here as more nodes come online.
 NODE_ID_TO_ROOM_ID = {
     "node_1": "corridor_a",
-    "esp32_1": "corridor_a",
 }
