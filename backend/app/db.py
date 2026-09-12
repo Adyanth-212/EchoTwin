@@ -34,6 +34,10 @@ SCHEMA_STATEMENTS = [
     )
     """,
     """
+    CREATE INDEX IF NOT EXISTS sensor_readings_room_sensor_time_idx
+    ON sensor_readings (room_id, sensor, time DESC)
+    """,
+    """
     CREATE TABLE IF NOT EXISTS cv_events (
         id BIGSERIAL,
         time TIMESTAMPTZ NOT NULL,
@@ -50,6 +54,10 @@ SCHEMA_STATEMENTS = [
     SELECT create_hypertable(
         'cv_events', 'time', if_not_exists => TRUE
     )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS cv_events_room_camera_time_idx
+    ON cv_events (room_id, camera_id, time DESC)
     """,
     """
     CREATE TABLE IF NOT EXISTS room_status (
