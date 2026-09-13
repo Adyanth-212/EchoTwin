@@ -984,6 +984,44 @@ select {
 }
 
 /* Marker labels rendered through drei's <Html>. */
+.zone-tag {
+  background: rgba(14, 19, 32, 0.88);
+  border: 1px solid var(--hairline);
+  border-radius: 7px;
+  padding: 5px 8px;
+  font-family: var(--font);
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  backdrop-filter: blur(3px);
+}
+
+.zone-tag.breached {
+  border-color: var(--red);
+  box-shadow: 0 0 0 1px var(--red);
+}
+
+.zone-tag-label {
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.zone-tag-state {
+  font-variant-numeric: tabular-nums;
+}
+
+.zone-tag.breached .zone-tag-state {
+  color: var(--red);
+  font-weight: 600;
+}
+
 .marker-label {
   background: rgba(14, 19, 32, 0.88);
   border: 1px solid var(--hairline);

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { MARKERS, ROOM, ROOM_MODEL } from "../roomLayout.js";
+import { MARKERS, ROOM, ROOM_MODEL, isInsideRestrictedZone } from "../roomLayout.js";
 import { SENSOR_META, formatValue } from "../config.js";
 import RoomShell from "./RoomShell.jsx";
 import SensorMarker from "./SensorMarker.jsx";
 import EquipmentMarker from "./EquipmentMarker.jsx";
 import PeopleLayer from "./PeopleLayer.jsx";
+import RestrictedZone from "./RestrictedZone.jsx";
 import MarkerEditor from "./MarkerEditor.jsx";
 
 const MARKER_STORAGE_KEY = "echotwin.markerPositions.v1";
@@ -154,6 +155,13 @@ export default function RoomScene(props) {
   const sensors = (room && room.sensors) || {};
   const status = room ? room.status : null;
   const peopleCount = (props.people || []).length;
+  // Wrapped rather than passed by reference: filter supplies (item, index,
+  // array), and that index would land in the function's second parameter and
+  // replace the zone it defaults to.
+  const intruderCount = useMemo(
+    () => (props.people || []).filter((person) => isInsideRestrictedZone(person)).length,
+    [props.people],
+  );
   const [modelMode, setModelMode] = useState(ROOM_MODEL.defaultMode);
   const [modelState, setModelState] = useState(null);
   const controlsRef = useRef(null);
@@ -270,6 +278,8 @@ export default function RoomScene(props) {
           placementEnabled={editingMarkers && modelMode === "mesh"}
           onSurfaceClick={handleSurfaceClick}
         />
+
+        <RestrictedZone intruderCount={intruderCount} />
 
         <PeopleLayer people={props.people} />
 

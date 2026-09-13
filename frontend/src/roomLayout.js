@@ -107,6 +107,45 @@ export const MARKERS = [
   },
 ];
 
+/* --- Restricted zone --------------------------------------------------
+ *
+ * A floor rectangle nobody is supposed to stand in — in front of the AC
+ * unit, say, or a maintenance exclusion area. Anyone whose floor position
+ * lands inside it is called out on the dashboard and drawn in red.
+ *
+ * This is evaluated in the browser from the per-person floor positions the
+ * CV producers already serve, so it needs no backend change. It only works
+ * once a camera has been calibrated (cv/producer.py --calibrate): without a
+ * calibration the producers report occupancy counts but no positions, and
+ * there is nothing to test a rectangle against.
+ *
+ * Coordinates are metres in the same frame as MARKERS above.
+ */
+export const RESTRICTED_ZONE = {
+  enabled: true,
+  label: "Equipment exclusion zone",
+  // Centre of the rectangle on the floor, [x, z].
+  center: [1.8, -1.6],
+  // Full width (x) and depth (z), not half-extents.
+  size: [1.8, 1.4],
+};
+
+export function isInsideRestrictedZone(person, zone = RESTRICTED_ZONE) {
+  if (!zone || !zone.enabled || !person) {
+    return false;
+  }
+  if (!Number.isFinite(person.x) || !Number.isFinite(person.z)) {
+    return false;
+  }
+
+  const halfWidth = zone.size[0] / 2;
+  const halfDepth = zone.size[1] / 2;
+  return (
+    Math.abs(person.x - zone.center[0]) <= halfWidth &&
+    Math.abs(person.z - zone.center[1]) <= halfDepth
+  );
+}
+
 export function findMarker(id) {
   for (let index = 0; index < MARKERS.length; index += 1) {
     if (MARKERS[index].id === id) {

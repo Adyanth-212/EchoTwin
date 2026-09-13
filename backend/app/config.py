@@ -21,6 +21,20 @@ SENSOR_TIMESTAMP_FUTURE_TOLERANCE_SECONDS = int(
     os.environ.get("SENSOR_TIMESTAMP_FUTURE_TOLERANCE_SECONDS", "60")
 )
 
+# Restricted-hours occupancy rule. Any presence at all inside this window is
+# flagged, on the basis that the space should be empty. Both bounds are local
+# "HH:MM"; leaving either blank (or making them equal) disables the rule, so
+# it stays opt-in for anyone who has not configured it.
+#
+# The offset is a fixed number of minutes rather than a zone name on purpose:
+# python:3.12-slim ships without tzdata, so ZoneInfo("Asia/Kolkata") would
+# raise inside the container. 330 = IST.
+RESTRICTED_HOURS_START = os.environ.get("RESTRICTED_HOURS_START", "")
+RESTRICTED_HOURS_END = os.environ.get("RESTRICTED_HOURS_END", "")
+RESTRICTED_HOURS_UTC_OFFSET_MINUTES = int(
+    os.environ.get("RESTRICTED_HOURS_UTC_OFFSET_MINUTES", "330")
+)
+
 TAILSCALE_OLLAMA_URL = os.environ.get("TAILSCALE_OLLAMA_URL", "")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:8b")
 OLLAMA_TIMEOUT_SECONDS = float(os.environ.get("OLLAMA_TIMEOUT_SECONDS", "20"))
