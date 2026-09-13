@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { STATUS_LABEL, formatAgo } from "../config.js";
+import { STATUS_LABEL, STALE_AFTER_MS, formatAgo } from "../config.js";
 
 const CONNECTION_COPY = {
   live: "Live",
   connecting: "Connecting",
   reconnecting: "Reconnecting",
+  stale: "Stale",
   demo: "Demo feed",
 };
 
@@ -24,7 +25,15 @@ export default function StatusHeader(props) {
   const status = room ? room.status : "unknown";
   const now = useClock();
 
-  const connectionState = props.connectionState;
+  // A live socket is not proof of live data. A sleeping laptop severs the
+  // connection without the browser firing onclose, and a stalled backend
+  // keeps the socket open while publishing nothing — both leave a green
+  // "Live" dot sitting above readings that are minutes old. Age of the last
+  // message is the honest signal, so it overrides the socket's own opinion.
+  const isSilent =
+    props.lastMessageAt !== null && now - props.lastMessageAt > STALE_AFTER_MS;
+  const connectionState =
+    props.connectionState === "live" && isSilent ? "stale" : props.connectionState;
   const connectionLabel = CONNECTION_COPY[connectionState] || "Offline";
 
   return (

@@ -276,6 +276,12 @@ select {
   animation: pulse 1.4s ease-in-out infinite;
 }
 
+/* Deliberately not pulsing: reconnecting is actively retrying, stale is a
+   connection that is up but silent. They should not look like each other. */
+.conn[data-state="stale"] .conn-dot {
+  background: var(--yellow);
+}
+
 .conn[data-state="demo"] .conn-dot {
   background: var(--accent);
 }
