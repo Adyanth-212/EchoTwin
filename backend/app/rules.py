@@ -1,4 +1,55 @@
-def evaluate_rules(sensors):
+from datetime import datetime, timedelta, timezone
+
+from app import config
+
+
+def parse_clock_time(value):
+    """Minutes past local midnight for an "HH:MM" string, or None if unusable."""
+    parts = value.split(":")
+    if len(parts) != 2:
+        return None
+
+    try:
+        hour = int(parts[0])
+        minute = int(parts[1])
+    except ValueError:
+        return None
+
+    if hour < 0 or hour > 23 or minute < 0 or minute > 59:
+        return None
+
+    return hour * 60 + minute
+
+
+def in_restricted_hours(now=None):
+    """True when local wall-clock time falls inside the restricted window.
+
+    `now` is injectable so the window can be tested without waiting for the
+    clock. A blank or equal pair of bounds disables the rule entirely.
+    """
+    start = parse_clock_time(config.RESTRICTED_HOURS_START)
+    end = parse_clock_time(config.RESTRICTED_HOURS_END)
+    if start is None or end is None or start == end:
+        return False
+
+    moment = now
+    if moment is None:
+        moment = datetime.now(timezone.utc)
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+
+    offset = timedelta(minutes=config.RESTRICTED_HOURS_UTC_OFFSET_MINUTES)
+    local = moment.astimezone(timezone(offset))
+    minutes = local.hour * 60 + local.minute
+
+    if start < end:
+        return start <= minutes < end
+
+    # The window crosses midnight, e.g. 22:00 -> 06:00.
+    return minutes >= start or minutes < end
+
+
+def evaluate_rules(sensors, now=None):
     status = "green"
     suggestions = []
 
@@ -28,6 +79,15 @@ def evaluate_rules(sensors):
             critical("Severe overcrowding detected — redirect people immediately.")
         elif occupancy >= 20:
             warn("Occupancy is elevated — consider redirecting traffic.")
+
+        # Presence at all is the fault condition here, not the headcount, so
+        # this is checked independently of the crowding thresholds above.
+        if occupancy > 0 and in_restricted_hours(now):
+            critical(
+                str(int(occupancy))
+                + " person(s) detected during restricted hours — this space "
+                "should be empty. Verify who is present."
+            )
 
     if temperature is not None:
         if temperature >= 35:
