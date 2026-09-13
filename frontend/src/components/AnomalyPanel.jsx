@@ -1,4 +1,5 @@
 import { sensorLabel } from "../config.js";
+import { occupancyExplainsAnomaly } from "../presenceRules.js";
 
 // The score shown here is the Isolation Forest's raw deviation score. It is
 // not an accuracy, a confidence or a probability: the model is unsupervised
@@ -12,7 +13,12 @@ import { sensorLabel } from "../config.js";
 // backend reports is_anomaly true with score +0.0216.
 export default function AnomalyPanel(props) {
   const anomaly = (props.room && props.room.anomaly) || null;
-  const isAnomaly = Boolean(anomaly && anomaly.is_anomaly);
+
+  // The model has no occupancy feature, so a crowded room raising CO2 scores
+  // the same as a fault. When the headcount accounts for every contributing
+  // feature, say so instead of reporting a fault.
+  const explainedByCrowd = occupancyExplainsAnomaly(props.room);
+  const isAnomaly = Boolean(anomaly && anomaly.is_anomaly) && !explainedByCrowd;
   const features = anomaly && Array.isArray(anomaly.top_features)
     ? anomaly.top_features
     : [];
@@ -35,6 +41,14 @@ export default function AnomalyPanel(props) {
               {isAnomaly ? "Anomaly flagged" : "Nothing unusual"}
             </span>
           </div>
+
+          {explainedByCrowd ? (
+            <p className="anomaly-features">
+              Above the model baseline, but every contributing reading is one a
+              busy room explains — {props.room.sensors.occupancy_count} people
+              present. Not reported as a fault.
+            </p>
+          ) : null}
 
           {isAnomaly && featureLabels.length > 0 ? (
             <p className="anomaly-features">

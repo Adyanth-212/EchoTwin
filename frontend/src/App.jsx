@@ -12,6 +12,7 @@ import RoomScene from "./components/RoomScene.jsx";
 import SensorGrid from "./components/SensorGrid.jsx";
 import AnomalyPanel from "./components/AnomalyPanel.jsx";
 import TrendBanner from "./components/TrendBanner.jsx";
+import PresenceBanner from "./components/PresenceBanner.jsx";
 import SuggestionList from "./components/SuggestionList.jsx";
 import AskTwin from "./components/AskTwin.jsx";
 import HistoryPanel from "./components/HistoryPanel.jsx";
@@ -139,6 +140,7 @@ function Dashboard(props) {
         onDismiss={notifications.dismissBanner}
       />
 
+      <PresenceBanner room={room} />
       <TrendBanner room={room} />
 
       <div className="app-main">
