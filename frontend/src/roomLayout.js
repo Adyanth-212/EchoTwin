@@ -83,7 +83,9 @@ export const MARKERS = [
     id: "esp32_1",
     kind: "sensor",
     label: "Sensor node",
-    position: [-2.9, 1.5, 0.4],
+    // Placed by clicking the desk in the scan, so it matches where the board
+    // physically sits rather than floating against the far wall.
+    position: [-0.014, 0.887, -0.034],
   },
   {
     id: "cam1",
