@@ -21,6 +21,16 @@ SENSOR_TIMESTAMP_FUTURE_TOLERANCE_SECONDS = int(
     os.environ.get("SENSOR_TIMESTAMP_FUTURE_TOLERANCE_SECONDS", "60")
 )
 
+# A busy room raises CO2, VOCs and humidity on its own. At or above this many
+# people, an anomaly driven purely by those is treated as explained rather than
+# as a fault. It never suppresses vibration, surface temperature or air
+# temperature — those are the signals an equipment fault actually shows up in,
+# and masking them because the room is busy would be the dangerous direction to
+# get this wrong.
+OCCUPANCY_EXPLAINS_AIR_MIN_PEOPLE = int(
+    os.environ.get("OCCUPANCY_EXPLAINS_AIR_MIN_PEOPLE", "5")
+)
+
 # Restricted-hours occupancy rule. Any presence at all inside this window is
 # flagged, on the basis that the space should be empty. Both bounds are local
 # "HH:MM"; leaving either blank (or making them equal) disables the rule, so

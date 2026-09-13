@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import text
 
-from app.anomaly import evaluate_anomaly
+from app.anomaly import evaluate_anomaly, occupancy_explains_anomaly
 from app.db import engine
 from app.rules import evaluate_rules
 from app.schemas.ws import AnomalyInfo, SensorReadings, TrendInfo, WSMessage
@@ -80,6 +80,19 @@ def build_room_status(room_id, source):
         if status == "green":
             status = "yellow"
         suggestions.append("Unusual camera activity detected — inspect this space.")
+
+    # A crowded room drives CO2 and humidity past the model's baseline, and the
+    # model cannot see people. Say so rather than reporting a fault — but only
+    # when the crowd accounts for every contributing feature.
+    occupancy_count = sensor_values.get("occupancy_count")
+    if is_anomaly and occupancy_explains_anomaly(top_features, occupancy_count):
+        is_anomaly = False
+        top_features = []
+        suggestions.append(
+            "Air quality is above the model baseline but consistent with "
+            + str(int(occupancy_count))
+            + " people present — not flagged as a fault."
+        )
 
     if is_anomaly:
         if status == "green":
