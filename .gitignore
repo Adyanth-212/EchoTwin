@@ -23,10 +23,10 @@ build/
 dist/
 *.egg-info/
 
-# Raw Gaussian scans exceed GitHub's file limit. Track the lossless .ply.gz;
-# frontend predev/prebuild automatically unpacks it to this ignored PLY.
-frontend/public/scans/*.ply
-frontend/public/scans/*.ply.*.tmp
+# Captured 3D scans are supplied locally, not committed (including archives).
+# Keep only the setup guide in this directory under version control.
+frontend/public/scans/*
+!frontend/public/scans/README.md
 
 # Editor
 .vscode/
