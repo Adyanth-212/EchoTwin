@@ -78,7 +78,7 @@ Use the reviewed `main-testing` code (coordinate sharing/commits first).
 In `frontend/.env.local`, keep the existing backend/camera settings and add:
 
 ```ini
-VITE_MAINTENANCE_HOST=100.93.145.13:8002
+VITE_MAINTENANCE_HOST=192.0.2.10:8002
 ```
 
 Replace the IP if it changed. Use `host:port` without `http://`, then restart

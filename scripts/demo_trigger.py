@@ -43,8 +43,8 @@ except ImportError:
     requests = None
 
 
-DEFAULT_BROKER = "100.93.145.13"
-DEFAULT_BACKEND = "http://100.93.145.13:8000"
+DEFAULT_BROKER = "192.0.2.10"
+DEFAULT_BACKEND = "http://192.0.2.10:8000"
 BROKER_PORT = 1883
 NODE_ID = "node_1"
 ROOM_ID = "corridor_a"

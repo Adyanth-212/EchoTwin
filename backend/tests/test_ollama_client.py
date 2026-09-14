@@ -19,7 +19,7 @@ class OllamaClientTests(unittest.TestCase):
             patch.object(
                 config,
                 "TAILSCALE_OLLAMA_URL",
-                "http://100.64.88.63:11434",
+                "http://192.0.2.40:11434",
             ),
             patch.object(config, "OLLAMA_MODEL", "qwen3:8b"),
             patch.object(config, "OLLAMA_TIMEOUT_SECONDS", 20.0),
