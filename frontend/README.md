@@ -7,8 +7,9 @@ phone-first view reachable by scanning a QR code on the equipment itself.
 
 ```bash
 cd frontend
-npm install
-cp .env.example .env      # optional — the defaults already work
+npm ci
+test -f .env.local || cp .env.example .env.local
+# Edit .env.local: replace dummy addresses with your own before starting.
 npm run dev
 ```
 
@@ -18,24 +19,25 @@ Opens at <http://localhost:5173>.
 
 ## The tailnet
 
-Everything at the venue talks over Tailscale. **These addresses change if the
-tailnet is recreated** — they already have once, which broke every hardcoded
-hostname in this repo.
+Use reachable LAN or Tailscale addresses for your deployment. The addresses
+below are **dummy examples**, not actual devices or a working tailnet:
 
-| Machine | Tailscale IP | MagicDNS | Runs |
-|---|---|---|---|
-| `sanjays-macbook-air` | `100.93.145.13` | `sanjays-macbook-air.tail22578a.ts.net` | Backend, Postgres, Mosquitto |
-| `adyanths-macbook-air` | `100.117.169.11` | `adyanths-macbook-air.tail22578a.ts.net` | Dashboard, CV producer (iPhone) |
-| `akshay-lenovo` | `100.105.226.40` | `akshay-lenovo.tail22578a.ts.net` | — |
+| Role | Example address | Runs |
+|---|---|---|
+| Backend laptop | `192.0.2.10` | Backend, Postgres, Mosquitto |
+| Frontend/camera laptop | `192.0.2.20` | Dashboard and camera producer(s) |
+| Firmware laptop | `192.0.2.30` | USB serial-to-MQTT bridge |
+| Ollama host | `192.0.2.40` | Optional language model |
 
-Current MagicDNS suffix: `tail22578a.ts.net`. Check with `tailscale status`.
+Find current device addresses with `tailscale status` or your LAN settings.
+Put the real backend host:port in ignored `frontend/.env.local` using
+`VITE_BACKEND_HOST`; do not publish your device names or MagicDNS suffix.
+Restart Vite after changing it. Without an override, Vite uses
+`localhost:8000`, meaning the backend must be on the same laptop.
 
-If MagicDNS is not resolving on a machine, use the raw `100.x` address — set
-`VITE_BACKEND_HOST=100.93.145.13:8000` in `frontend/.env`. That is the only
-place the frontend needs it; `vite.config.js` reads it and both REST and the
-WebSocket follow.
-
-For the CV producer it is `--backend http://100.93.145.13:8000`.
+For a remote CV producer, pass `--backend http://BACKEND_IP:8000` with your
+actual backend address. All other `192.0.2.x` examples in this guide likewise
+need substitution before use.
 
 ## How it talks to the backend
 
@@ -67,11 +69,12 @@ be on the same hotspot.
 
 ## Environment variables
 
-All optional. Copy `.env.example` to `.env` to change any of them.
+All optional. Put overrides in ignored `.env.local`; example network addresses
+must be replaced before use. Keep your working local configuration private.
 
 | Variable | Default | What it does |
 |---|---|---|
-| `VITE_BACKEND_HOST` | `sanjays-macbook-air.tail22578a.ts.net:8000` | Backend host:port. Read by `vite.config.js` only; both REST and WebSocket follow it. **Restart the dev server after changing it.** |
+| `VITE_BACKEND_HOST` | `localhost:8000` | Backend host:port. Read by `vite.config.js` only; both REST and WebSocket follow it. **Restart the dev server after changing it.** |
 | `VITE_WS_URL` | unset | Bypasses the proxy and connects the WebSocket straight to this URL. Only for the mock sender. |
 | `VITE_ROOM_ID` | `corridor_a` | The room this dashboard shows. |
 | `VITE_DEMO` | unset | `1` feeds the whole UI from a built-in synthetic generator. See below. |
@@ -164,29 +167,28 @@ The browser never talks to Ollama. The chain is:
 AskTwin ──/api/room-status/{id}/ai-advice──▶ backend ──▶ Ollama (home PC, via Tailscale)
 ```
 
-Ollama runs on the home PC at **`http://100.64.88.63:11434`**, serving
-`qwen3:8b` (8.2B, Q4_K_M, 5.6GB). Verified reachable from the tailnet at
-~0.26s round trip.
+Ollama can run on a separate host serving `qwen3:8b`. The URL
+`http://192.0.2.40:11434` below is a dummy example: replace it with your
+model server's address and verify connectivity from the backend.
 
 ### Required backend settings
 
-These go in `backend/.env` on `sanjays-macbook-air`, where the backend runs.
-**They are not set by default and every one of them silently forces the rule
-based fallback:**
+For Docker Compose, put these in the ignored repository-root `.env` on the
+backend laptop; `backend/.env` is for direct Python runs. Replace the example
+address. The model and timeout shown below already match code defaults:
 
 ```ini
-TAILSCALE_OLLAMA_URL=http://100.64.88.63:11434
+TAILSCALE_OLLAMA_URL=http://192.0.2.40:11434
 OLLAMA_MODEL=qwen3:8b
 OLLAMA_TIMEOUT_SECONDS=20
 ```
 
 - `TAILSCALE_OLLAMA_URL` defaults to empty, and `get_ai_advice` returns
   `None` immediately when it is unset.
-- `OLLAMA_MODEL` defaults to `llama3.1:8b`, which is **not installed** on
-  that machine. Only `qwen3:8b` is.
-- `OLLAMA_TIMEOUT_SECONDS` defaults to `2.5`. Measured generation time for
-  the backend's own prompt is **4.9-6.5s**, so at 2.5s the LLM never once
-  answers in time.
+- `OLLAMA_MODEL` defaults to `qwen3:8b`; install that model on your host or
+  change this to the model you actually serve.
+- `OLLAMA_TIMEOUT_SECONDS` defaults to `20`. Unavailable, slow, or empty
+  model responses produce the labelled rules fallback.
 
 ### Why it is slow, and the one-line fix
 
@@ -207,8 +209,8 @@ json={
 },
 ```
 
-That file belongs to the backend branch and is not changed here. Until it
-is, raise the timeout instead.
+The backend already sends `think: false`; no additional code change is
+needed. These earlier latency measurements are not a guarantee for your host.
 
 Two things that look like fixes and are not: `"/no_think"` as a system
 prompt is ignored by Ollama 0.34, and setting `think` as a model-level
@@ -219,14 +221,13 @@ response. Both were tried against the live server.
 
 ### Keeping the model in VRAM
 
-Already handled: `expires_at` on the loaded model reads year 2318, and it
-stays there after a request that sends no `keep_alive`, so
-`OLLAMA_KEEP_ALIVE` is set server-side on the home PC. Nothing to do.
+Configure keep-alive on your own model host if desired; the repository does
+not configure or verify a particular machine's loaded-model state.
 
 To pin it manually from any machine on the tailnet:
 
 ```bash
-curl http://100.64.88.63:11434/api/generate \
+curl http://192.0.2.40:11434/api/generate \
   -d '{"model":"qwen3:8b","keep_alive":"24h"}'
 ```
 
@@ -252,13 +253,13 @@ air readings.
 ### Generating the codes
 
 ```bash
-node ../scripts/make-qr.mjs 192.168.1.50:5173
+node ../scripts/make-qr.mjs 192.0.2.20:5173
 ```
 
 or from `frontend/`:
 
 ```bash
-npm run qr -- 192.168.1.50:5173
+npm run qr -- 192.0.2.20:5173
 ```
 
 The host is an argument (or `QR_HOST`) because the venue address is not known

@@ -7,8 +7,8 @@
  * The host is an argument or an env var, not a constant, because the venue
  * address is not known until the hotspot is up:
  *
- *   node scripts/make-qr.mjs 192.168.1.50:5173
- *   QR_HOST=192.168.1.50:5173 node scripts/make-qr.mjs
+ *   node scripts/make-qr.mjs 192.0.2.20:5173
+ *   QR_HOST=192.0.2.20:5173 node scripts/make-qr.mjs
  *
  * Output goes to scripts/qr/ — one PNG per marker plus one for the room, each
  * named after the marker so it is obvious which sticker goes where, plus a
