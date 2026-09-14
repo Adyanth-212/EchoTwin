@@ -87,7 +87,7 @@ Configuration locations:
 | Firmware source / device setup | Direct ESP32 Wi-Fi/MQTT | Network placeholders must be configured before direct MQTT works |
 | `cv/calibration_cam1.json`, `cv/calibration_cam2.json` | Camera producers | Local, camera-pose-specific calibration; intentionally ignored |
 
-Values in `.env.example` include the team's old deployment addresses. They are examples, not discovery: confirm current IPs before copying them. Tailscale user membership alone does not prove a device or application is reachable. Test the actual HTTP endpoint too.
+Addresses in committed examples use the documentation-only `192.0.2.0/24` range; they do not identify live servers. Replace them with your own reachable LAN/Tailscale addresses in ignored `.env` files. Keep device-specific hostnames and addresses out of committed code/docs. `localhost` / `127.0.0.1` (this device) and `0.0.0.0` (listen on all interfaces) retain their functional meanings and are not secret deployment addresses. Tailscale user membership alone does not prove a device or application is reachable. Test the actual HTTP endpoint too.
 
 ## Startup
 

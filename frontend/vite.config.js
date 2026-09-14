@@ -9,7 +9,7 @@ import react from "@vitejs/plugin-react";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const backendHost =
-    env.VITE_BACKEND_HOST || "sanjays-macbook-air.tail22578a.ts.net:8000";
+    env.VITE_BACKEND_HOST || "localhost:8000";
 
   const httpTarget = "http://" + backendHost;
   const wsTarget = "ws://" + backendHost;

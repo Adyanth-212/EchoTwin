@@ -40,7 +40,8 @@ from ultralytics import YOLO
 # Must match the backend's CVEvent pattern exactly.
 ROOM_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
 
-DEFAULT_BACKEND = "http://sanjays-macbook-air.tail22578a.ts.net:8000"
+# Remote deployments supply --backend; no personal device address is embedded.
+DEFAULT_BACKEND = "http://localhost:8000"
 
 # COCO class 0 is "person". The model is the pretrained YOLOv8n as shipped —
 # no training and no custom weights.
@@ -91,7 +92,7 @@ def parse_arguments():
         default=None,
         help=(
             "Camera source: a device index like 2, or a URL like "
-            "http://192.168.1.31:8080/video for a phone running IP Webcam. "
+            "http://192.0.2.51:8080/video for a phone running IP Webcam. "
             "Overrides --camera-index."
         ),
     )
