@@ -1,4 +1,4 @@
-# EchoTwin Review 2 offline capture and calibration workflow
+# EchoTwin offline capture and calibration workflow
 
 This workflow produces a reliable USB Serial demonstration while Wi-Fi,
 MQTT, NTP, and Tailscale are unavailable. The laptop's
@@ -10,7 +10,7 @@ its monotonic `device_uptime_ms` and does not invent wall-clock time.
 Open PowerShell and run:
 
 ```powershell
-Set-Location "C:\Users\vijay\Documents\EchoTwin\esp32-firmware"
+Set-Location "<path-to>\EchoTwin\esp32-firmware"
 
 py -m venv .venv
 
@@ -31,9 +31,9 @@ PlatformIO and Arduino Serial Monitor first because only one process can open
 COM10, then run:
 
 ```powershell
-Set-Location "C:\Users\vijay\Documents\EchoTwin\esp32-firmware"
+Set-Location "<path-to>\EchoTwin\esp32-firmware"
 
-.\.venv\Scripts\python.exe .\tools\serial_to_mqtt.py --port COM10 --baud 115200 --broker-host <ADITYA_TAILSCALE_IP> --broker-port 1883 --node-id node_1 --label review2_live
+.\.venv\Scripts\python.exe .\tools\serial_to_mqtt.py --port COM10 --baud 115200 --broker-host <BROKER_HOST> --broker-port 1883 --node-id node_1 --label live_capture
 ```
 
 Look for `[SERIAL CONNECTED]`, `[MQTT CONNECTED]`, and increasing `queued` and
@@ -41,7 +41,7 @@ Look for `[SERIAL CONNECTED]`, `[MQTT CONNECTED]`, and increasing `queued` and
 files under `data\`. Only the eight allowed MQTT sensor names are published;
 the raw MPU axes and SW-420 diagnostics remain available in the local capture.
 
-## Review 2 procedure
+## Capture procedure
 
 1. Wire and power the ESP32 sensor node. Use SDA GPIO21, SCL GPIO22, and the
    verified addresses AHT21 `0x38`, ENS160 `0x53`, MLX90614 `0x5A`, and
@@ -49,7 +49,7 @@ the raw MPU axes and SW-420 diagnostics remain available in the local capture.
 2. Flash the `sensor_node` PlatformIO environment:
 
    ```powershell
-   Set-Location "C:\Users\vijay\Documents\EchoTwin\esp32-firmware"
+   Set-Location "<path-to>\EchoTwin\esp32-firmware"
    .\.venv\Scripts\python.exe -m platformio run -e sensor_node -t upload --upload-port COM10
    ```
 

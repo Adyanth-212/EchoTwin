@@ -4,7 +4,7 @@
 .vscode/launch.json
 .vscode/ipch
 
-# Review 2 captures and generated calibration reports (keep directory markers).
+# Captures and generated calibration reports (keep directory markers).
 data/*
 !data/.gitkeep
 calibration/*

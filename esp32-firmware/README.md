@@ -1,7 +1,7 @@
 # EchoTwin ESP32 firmware
 
-Owner: **Akshay**. This folder contains the first-boot I2C scanner and the
-complete sensor-to-MQTT firmware for EchoTwin.
+This folder contains the first-boot I2C scanner and the complete
+sensor-to-MQTT firmware for EchoTwin.
 
 The fixed source documents are:
 
@@ -41,7 +41,7 @@ the canonical Arduino sketches. Do not duplicate implementation code in them.
 device as present or missing. `sensor_node.ino` initializes every sensor,
 prints readable and structured readings even without a network, and publishes
 valid readings when Wi-Fi, MQTT, and NTP time are available. See
-[`CALIBRATION.md`](CALIBRATION.md) for the exact Review 2 offline workflow.
+[`CALIBRATION.md`](CALIBRATION.md) for the exact offline capture workflow.
 
 ## Fixed wiring
 
@@ -92,7 +92,7 @@ At the top of `sensor_node/sensor_node.ino`, replace:
 #define NODE_ID "node_1"
 ```
 
-`NODE_ID` must match Aditya's backend lookup table. Do not add `room_id` to
+`NODE_ID` must match the backend's node lookup table. Do not add `room_id` to
 the ESP32 payload. Do not commit real credentials; restore the TODO values
 before committing changes.
 
@@ -130,12 +130,13 @@ second beginning with `[SERIAL_DATA]`. Its JSON contains device uptime rather
 than invented ESP32 wall-clock time; the offline logger adds authoritative UTC
 `host_timestamp` values on the laptop. Missing measurements are `null`.
 
-For live Review 2 delivery, keep the ESP32 offline and use this laptop as the
-USB Serial-to-Tailscale gateway. Close PlatformIO and Arduino Serial Monitor,
-then run the bridge with Aditya's current Tailscale address:
+For a live demonstration without Wi-Fi on the board, keep the ESP32 offline
+and use the attached laptop as the USB serial-to-MQTT gateway. Close
+PlatformIO and Arduino Serial Monitor, then run the bridge against the
+broker's reachable address:
 
 ```powershell
-.\.venv\Scripts\python.exe .\tools\serial_to_mqtt.py --port COM10 --baud 115200 --broker-host <ADITYA_TAILSCALE_IP> --broker-port 1883 --node-id node_1 --label review2_live
+.\.venv\Scripts\python.exe .\tools\serial_to_mqtt.py --port COM10 --baud 115200 --broker-host <BROKER_HOST> --broker-port 1883 --node-id node_1 --label live_capture
 ```
 
 The bridge saves every valid structured record to JSONL and CSV before
