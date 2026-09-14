@@ -30,6 +30,11 @@ directory you will run the producer from.
 
 ## Camera sources
 
+All `192.0.2.x` addresses in this guide are dummy documentation examples.
+Replace them with your own reachable addresses when running a command.
+The producer defaults to `http://localhost:8000`; use `--backend` when the
+backend runs on another laptop, and keep private hostnames out of Git.
+
 The camera is either an **OpenCV device index** or a **URL** — both go
 straight to `cv2.VideoCapture`.
 
@@ -38,8 +43,8 @@ straight to `cv2.VideoCapture`.
 | **iPhone via Continuity Camera** (macOS) | `--camera-index <n>` |
 | Phone over USB via Iriun | `--camera-index 2` |
 | Laptop webcam | `--camera-index 0` |
-| Android phone running **IP Webcam** | `--source http://192.168.1.31:8080/video` |
-| Anything streaming RTSP | `--source rtsp://192.168.1.31:8554/live` |
+| Android phone running **IP Webcam** | `--source http://192.0.2.51:8080/video` |
+| Anything streaming RTSP | `--source rtsp://192.0.2.51:8554/live` |
 
 Find out which index is which:
 
@@ -107,19 +112,19 @@ unplugged or a phone reconnected, indices can shift — run
 Laptop 1:
 
 ```bash
-python3 producer.py --camera-id cam1 --source http://192.168.1.31:8080/video
+python3 producer.py --camera-id cam1 --source http://192.0.2.51:8080/video
 ```
 
 Laptop 2, second camera, second positions port:
 
 ```bash
-python3 producer.py --camera-id cam2 --source http://192.168.1.32:8080/video --http-port 8011
+python3 producer.py --camera-id cam2 --source http://192.0.2.52:8080/video --http-port 8011
 ```
 
 Against a backend somewhere else:
 
 ```bash
-python3 producer.py --camera-id cam1 --backend http://192.168.1.42:8000
+python3 producer.py --camera-id cam1 --backend http://192.0.2.10:8000
 ```
 
 Output is one line per POST:
@@ -141,7 +146,7 @@ mounted CCTV phone, and exactly wrong for a handheld one. Re-run calibration
 if a camera gets knocked.
 
 ```bash
-python3 producer.py --camera-id cam1 --source http://192.168.1.31:8080/video --calibrate
+python3 producer.py --camera-id cam1 --source http://192.0.2.51:8080/video --calibrate
 ```
 
 A window opens on the live feed. Click the four corners of a floor rectangle
@@ -246,7 +251,7 @@ Re-run with --camera-index <one of those>.
 | `--camera-index` | `2` | OpenCV device index |
 | `--camera-id` | `cam1` | Identifier sent to the backend; must differ per laptop |
 | `--room-id` | `corridor_a` | Room this camera watches; lowercase snake_case |
-| `--backend` | `sanjays-macbook-air.tail22578a.ts.net:8000` | Backend base URL; use `http://100.93.145.13:8000` if MagicDNS will not resolve |
+| `--backend` | `http://localhost:8000` | Backend base URL; override with your actual reachable LAN/Tailscale address for a remote backend |
 | `--interval` | `1.5` | Seconds between inference samples |
 | `--conf` | `0.4` | Confidence floor for a detection to count |
 | `--jump` | `3` | Occupancy change between samples that counts as unusual |

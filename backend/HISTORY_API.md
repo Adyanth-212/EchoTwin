@@ -62,11 +62,12 @@ any event in the interval was unusual.
 
 ## Frontend examples
 
-On the current shared Tailscale network, use the backend Mac's Tailscale IP:
+Replace the documentation-only address below with your backend's reachable
+LAN or Tailscale IP. Do not publish your deployment's actual address here:
 
 ```text
-http://100.93.145.13:8000/history/rooms
-http://100.93.145.13:8000/history/sensors?room_id=corridor_a&sensor=temperature&bucket=5m
+http://192.0.2.10:8000/history/rooms
+http://192.0.2.10:8000/history/sensors?room_id=corridor_a&sensor=temperature&bucket=5m
 ```
 
 The top-level response includes `from`, `to`, `bucket`, `point_count`, and
