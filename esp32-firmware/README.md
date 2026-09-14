@@ -3,12 +3,9 @@
 This folder contains the first-boot I2C scanner and the complete
 sensor-to-MQTT firmware for EchoTwin.
 
-The fixed source documents are:
-
-- [`../EchoTwin_Master_Agent_Context.md`](../EchoTwin_Master_Agent_Context.md),
-  especially section 5.
-- [`../schemas/mqtt_and_ws.md`](../schemas/mqtt_and_ws.md), which defines the
-  MQTT topic, JSON shape, and allowed sensor names.
+The fixed source document is
+[`../schemas/mqtt_and_ws.md`](../schemas/mqtt_and_ws.md), which defines the
+MQTT topic, JSON shape, and allowed sensor names.
 
 ## Files
 
@@ -45,14 +42,18 @@ valid readings when Wi-Fi, MQTT, and NTP time are available. See
 
 ## Fixed wiring
 
-| Device | ESP32 connection | Expected address |
-|---|---|---|
-| AHT21 | SDA GPIO21, SCL GPIO22 | `0x38` |
-| ENS160 | SDA GPIO21, SCL GPIO22 | `0x53` |
-| MLX90614 | SDA GPIO21, SCL GPIO22 | `0x5A` |
-| MPU-6050 | SDA GPIO21, SCL GPIO22 | `0x68` |
-| SW-420 digital output | GPIO5 | Not I2C |
-| DHT22 data (optional) | GPIO4 | Not I2C |
+| Device | Measures | ESP32 connection | Expected address |
+|---|---|---|---|
+| AHT21 | Temperature, humidity | SDA GPIO21, SCL GPIO22 | `0x38` |
+| ENS160 | eCO2, TVOC, AQI | SDA GPIO21, SCL GPIO22 | `0x53` |
+| MLX90614 | Non-contact surface temperature, 35 degree field of view | SDA GPIO21, SCL GPIO22 | `0x5A` |
+| MPU-6050 | Vibration: acceleration magnitude and direction | SDA GPIO21, SCL GPIO22 | `0x68` |
+| SW-420 digital output | Vibration: binary trip, tuned by onboard potentiometer | GPIO5 | Not I2C |
+| DHT22 data (optional) | Temperature and humidity redundancy | GPIO4 | Not I2C |
+
+AHT21 and ENS160 are one combo board sharing the I2C bus. MQ135 was
+considered and dropped: the ENS160 already reports calibrated eCO2, TVOC,
+and AQI rather than a raw analog voltage.
 
 All devices must share ESP32 ground. The DHT22 needs a 10 kOhm pull-up from
 DATA to 3.3 V if its module does not already include one. ESP32 GPIO pins are

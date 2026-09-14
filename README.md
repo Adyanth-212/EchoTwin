@@ -443,8 +443,12 @@ This stops containers without deleting database storage. **Do not run `down -v`,
 - Backend occupancy uses the latest camera event, not a globally deduplicated headcount. The frontend's calibrated proximity merge is an approximation, not cross-camera identity tracking.
 - Trend estimates have the sampling-window issue described above; model accuracy has not been validated against a labeled real-world failure dataset.
 - Main's camera polling may interrupt slow frame downloads; its pending fix is not included in this documentation update.
-- No committed CI workflow or project license file exists at this revision. Component guides contain some historical setup/defaults; use this root guide for current startup and check source/config where they disagree.
+- No committed CI workflow exists at this revision. Component guides contain some historical setup/defaults; use this root guide for current startup and check source/config where they disagree.
 - Automatic sensor localization and accurate physical alignment are separate work—not implied by a successful web build.
+
+## License
+
+Released under the MIT License. See [LICENSE](LICENSE).
 
 ## Further documentation
 
