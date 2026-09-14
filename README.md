@@ -231,7 +231,7 @@ Real calls require `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBE
 
 Call submission is not proof of answering; inspect provider status and confirm audibility with the recipient. An uncertain request is not automatically redialed. The earlier team demo notes report a successful manual Console call but a rejected backend inline-TwiML trial call: **automatic calling is not verified end to end; keep dry-run as the default** until separately tested.
 
-See [maintenance details](https://github.com/Adyanth-212/EchoTwin/blob/29c7f0d6daa16184a2ca4965734e21c39722529e/backend/MAINTENANCE.md). Some older component documentation still refers to maintenance as branch-only; current `main` contains it.
+See [maintenance details](backend/MAINTENANCE.md). The maintenance worker is a confirmed feature of `main`, not a branch-only experiment.
 
 ## 3D scans and markers
 
@@ -450,7 +450,7 @@ This stops containers without deleting database storage. **Do not run `down -v`,
 
 - [MQTT and WebSocket contract](schemas/mqtt_and_ws.md)
 - [History API](backend/HISTORY_API.md)
-- [Maintenance implementation](https://github.com/Adyanth-212/EchoTwin/blob/29c7f0d6daa16184a2ca4965734e21c39722529e/backend/MAINTENANCE.md)
+- [Maintenance implementation](backend/MAINTENANCE.md)
 - [Frontend and browser mobile/AR details](frontend/README.md)
 - [Camera setup and calibration](cv/README.md)
 - [Firmware setup](esp32-firmware/README.md)

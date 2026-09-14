@@ -1,4 +1,4 @@
-# Maintenance watcher — `main-testing`
+# Maintenance watcher
 
 An optional worker on the **backend laptop**, not a new model and not a
 browser timer. It reads stored sensor/CV data, records incidents in PostgreSQL,
@@ -48,7 +48,7 @@ If intentionally stopped, start the existing demo containers when you are ready:
 docker start backend-postgres-1 backend-mosquitto-1 backend-fastapi-1
 ```
 
-Then build/start **only** the experimental sidecars:
+Then build/start **only** the optional sidecars:
 
 ```bash
 MAINTENANCE_NOTIFICATION_MODE=dry_run docker compose --profile maintenance build maintenance-api maintenance-worker
@@ -74,7 +74,7 @@ Do not run `down -v` on the demo stack; it deletes the database volume.
 
 ## Frontend laptop
 
-Use the reviewed `main-testing` code (coordinate sharing/commits first).
+The maintenance routes and panel are on `main`; no branch switch is needed.
 In `frontend/.env.local`, keep the existing backend/camera settings and add:
 
 ```ini
