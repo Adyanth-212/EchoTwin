@@ -9,14 +9,14 @@ This guide describes the website/backend on `main`, reviewed against commit `29c
 ## What is included
 
 - Live sensor cards, WebSocket updates, status/anomaly timelines, and stored sensor/CV history.
-- A real table scan, selectable as a textured GLB mesh or a Gaussian-splat PLY.
+- A 3D viewer for locally supplied textured GLB meshes or Gaussian-splat PLY scans.
 - Two camera feeds with YOLO person detections; calibrated floor positions displayed in 3D.
 - Deterministic warning/critical rules, a synthetic-baseline Isolation Forest, and linear trend estimates.
 - Optional Qwen3/Ollama explanations with a rules fallback.
 - A maintenance worker with persistent incidents, acknowledge/resolve controls, inspection suggestions, and optional Twilio calling.
 - A phone-oriented browser view and optional camera-passthrough AR layer.
 
-**Not included on current `main`:** the separate Capacitor Android/iOS app and its mobile notification work. At this review, that work exists on the local `main-app` branch, with additional uncommitted changes; there is no remote `main-app` branch. Automatic discovery/localization of individual sensors is not implemented. Scene markers are configured or manually placed, not recognized from wires or a scan.
+Automatic discovery/localization of individual sensors is not implemented. Scene markers are configured or manually placed, not recognized from wires or a scan. Captured 3D scans are supplied separately and are not bundled with this checkout.
 
 ## Architecture
 
@@ -49,7 +49,7 @@ Video frames and calibrated person positions are served directly by the CV produ
 | `backend/db/schema.sql` | Initial database setup; runtime startup also initializes schema |
 | `backend/models/isolation_forest.joblib` | Committed anomaly-model artifact |
 | `frontend/src/` | Dashboard, 3D viewers, browser mobile view, history/incident UI |
-| `frontend/public/scans/` | Real table GLB and compressed Gaussian PLY |
+| `frontend/public/scans/` | Local, Git-ignored scan assets and their setup guide |
 | `cv/` | Camera capture, person detection, calibration, frame/position server |
 | `esp32-firmware/` | ESP32 firmware, PlatformIO configuration, serial tools/tests |
 | `ml/` | Reproducible synthetic anomaly-model training script |
@@ -235,17 +235,33 @@ See [maintenance details](https://github.com/Adyanth-212/EchoTwin/blob/29c7f0d6d
 
 ## 3D scans and markers
 
-Both real scans are in Git; they are not external downloads or Git LFS pointers:
+Bring your own scan: captured meshes, Gaussian files, and compressed scan archives are intentionally excluded from Git. A fresh clone can run without them using the fallback room. The small synthetic `frontend/public/room-sample.glb` and renderer/Draco files remain available for testing; they are not captured room data.
 
-| Asset | Tracked size | Purpose |
+### Supported scan formats
+
+| Representation | Format | Requirements |
 | --- | ---: | --- |
-| `frontend/public/scans/table-mesh.glb` | 20,234,856 bytes | Textured mesh, with embedded assets |
-| `frontend/public/scans/table-gaussian.ply.gz` | 29,484,834 bytes | Losslessly compressed Gaussian scan |
-| `frontend/public/room-sample.glb` | 1,756 bytes | Small sample, **not** the real table |
+| Textured mesh | `.glb` (glTF 2.0 binary) | Prefer a self-contained export with geometry and textures embedded. Draco-compressed geometry is supported by the bundled decoder. |
+| Gaussian splat | Gaussian-splat `.ply` | Use a Gaussian reconstruction export, including position, color, opacity, scale, and rotation attributes. An ordinary mesh/point-cloud PLY is not equivalent. |
+| Optional local archive | `.ply.gz` | A gzip-compressed compatible Gaussian PLY; the prep script can unpack the default filename below. |
 
-`npm run dev` and `npm run build` automatically unpack the Gaussian archive into `frontend/public/scans/table-gaussian.ply` (124,921,859 bytes, 503,711 splats). The raw PLY is generated and ignored by Git. Absence of the raw `.ply` immediately after cloning is expected.
+For the documented workflow, export/convert mesh formats such as OBJ or FBX to GLB; do not rename their extensions. A scan is a visual reconstruction, not automatic sensor identification. Capture adequate overlapping views, keep the scene still, and check textures and geometry before using it in a demo.
 
-Manual preparation:
+### Add a scan locally
+
+1. Copy the mesh to `frontend/public/scans/table-mesh.glb` and/or the Gaussian export to `frontend/public/scans/table-gaussian.ply`. Either representation can be supplied independently.
+2. Alternatively, place `table-gaussian.ply.gz` in that directory. `npm run dev` and `npm run build` unpack it if the raw PLY does not already exist. Without either Gaussian file, preparation skips it and the viewer uses its fallback.
+3. For custom filenames, set the corresponding values in `frontend/.env.local` (URLs relative to `frontend/public/`, not absolute laptop paths):
+
+```ini
+VITE_ROOM_MODEL_MODE=mesh
+VITE_ROOM_MESH=/scans/my-room.glb
+VITE_ROOM_SPLAT=/scans/my-room.ply
+```
+
+Only set overrides for files you actually supply, then restart Vite. Custom `.gz` filenames are not automatically unpacked: decompress them locally or use the default archive filename.
+
+Manual preparation of the default local archive:
 
 ```bash
 cd frontend
@@ -254,9 +270,13 @@ node scripts/prepare-scans.mjs
 
 Use the **Mesh / Gaussian** toggle, orbit, zoom, and reset-view controls. `frontend/src/roomLayout.js` holds transforms, room dimensions, initial marker positions, and the exclusion-zone configuration. Model placement, floor calibration, and marker alignment must share a coordinate frame; they are not automatically inferred from the scan.
 
-Optional frontend overrides include `VITE_ROOM_MODEL_MODE`, `VITE_ROOM_MESH`, and `VITE_ROOM_SPLAT`. Paths are URLs served from `frontend/public/`, not absolute laptop file paths. Draco decoder files are also committed under `frontend/public/`.
+To test without your own scan, set `VITE_ROOM_MESH=/room-sample.glb` in `frontend/.env.local`. Large Gaussian reconstructions can use substantial browser memory; test loading, zoom, and image quality on the actual demo devices.
 
 The prep script preserves an existing raw PLY. If replacing the archive, first back up/move any old generated PLY you want to keep, then regenerate; otherwise the previous local file remains in use. Verify the visual result rather than relying on the fallback room to prove the scan loaded.
+
+Keep private backups of original exports outside the checkout and transfer scans separately to each frontend laptop. Files under `public/` can be served to anyone who can reach the frontend: Git-ignored does not mean private at runtime. A build made with local scans will include those assets in its output.
+
+**Upgrading an older checkout:** back up tracked scan files outside the repo before pulling the commit that removes them, then restore them locally into `public/scans/`. Removing them in a new commit does not erase old Git history; no history rewrite is performed.
 
 The optional phone browser view/AR instructions are in [frontend documentation](frontend/README.md). Camera passthrough needs a secure context such as HTTPS or localhost. It does **not** identify a sensor by radio, recognize every individual sensor, or provide measured physical proximity. The QR/equipment-link workflow is a separate, explicit identification mechanism.
 
@@ -422,9 +442,9 @@ This stops containers without deleting database storage. **Do not run `down -v`,
 - Fusion reads latest stored values without per-source age gating. Frontend stale indicators and maintenance freshness checks do not make that fused snapshot fully freshness-aware.
 - Backend occupancy uses the latest camera event, not a globally deduplicated headcount. The frontend's calibrated proximity merge is an approximation, not cross-camera identity tracking.
 - Trend estimates have the sampling-window issue described above; model accuracy has not been validated against a labeled real-world failure dataset.
-- Main's camera polling may interrupt slow frame downloads; the fix currently exists only in the local app worktree.
+- Main's camera polling may interrupt slow frame downloads; its pending fix is not included in this documentation update.
 - No committed CI workflow or project license file exists at this revision. Component guides contain some historical setup/defaults; use this root guide for current startup and check source/config where they disagree.
-- Native app deployment, background remote push credentials, automatic sensor localization, and accurate physical alignment are separate work—not implied by a successful web build.
+- Automatic sensor localization and accurate physical alignment are separate work—not implied by a successful web build.
 
 ## Further documentation
 

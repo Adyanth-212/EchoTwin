@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 import { pipeline } from "node:stream/promises";
 import { createGunzip } from "node:zlib";
 
-// GitHub can store the losslessly compressed scan. Vite serves the original
-// PLY after this preparation step; existing local scan edits are preserved.
+// Optionally unpack a user-supplied local archive. Scan assets are Git-ignored;
+// Vite serves the resulting PLY and existing local scan edits are preserved.
 export async function prepareScan(directory = new URL("../public/scans/", import.meta.url)) {
   const source = new URL("table-gaussian.ply.gz", directory);
   const target = new URL("table-gaussian.ply", directory);

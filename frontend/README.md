@@ -322,10 +322,12 @@ Gaussian splat, with a control above the canvas for switching between them.
 
 ### Using a real scan
 
-1. Scan the room with **Scaniverse**, **Polycam**, or **RoomPlan**. Walk
-   slowly, keep heavy overlap, and capture high, level, and low passes.
-2. Export the mesh as **GLB** and the Gaussian reconstruction as **PLY** or
-   **SPZ**.
+1. Capture the room with a scanner that can export a textured mesh or a
+   Gaussian reconstruction. Walk slowly, keep heavy overlap, and capture
+   high, level, and low passes while the scene stays still.
+2. For this setup, export the mesh as **GLB** with embedded textures, or the
+   Gaussian reconstruction as a compatible **Gaussian-splat PLY**. A generic
+   point-cloud/mesh PLY does not contain the same attributes as a splat export.
 3. Save them as `frontend/public/scans/table-mesh.glb` and
    `frontend/public/scans/table-gaussian.ply`, or set `VITE_ROOM_MESH` and
    `VITE_ROOM_SPLAT` to different paths under `public/`.
@@ -333,14 +335,17 @@ Gaussian splat, with a control above the canvas for switching between them.
 5. If either looks misaligned, adjust its block under `ROOM_MODEL` in
    `src/roomLayout.js`.
 
-If the file is missing, malformed or the wrong format, the box room is drawn
-instead and everything else works normally. There is no state in which a bad
-scan breaks the dashboard.
+Captured scans are not included in Git. If a scan is absent or its loader
+reports an error, the scene is designed to fall back to a box room. Test large
+files on the actual device; fallback handling cannot guarantee recovery from
+browser/GPU memory exhaustion.
 
 Test the loader before you have a scan:
 
-```bash
-echo "VITE_ROOM_MESH=/room-sample.glb" >> .env
+Set this in `frontend/.env.local`, then restart Vite:
+
+```ini
+VITE_ROOM_MESH=/room-sample.glb
 ```
 
 ### Fixing up a scan
@@ -357,14 +362,18 @@ Everything is in the `ROOM_MODEL.mesh` and `ROOM_MODEL.gaussian` blocks in
 | `mesh.clipHeight` | Slices the mesh above this height for a dollhouse view. `null` shows the complete mesh. |
 | `gaussian.focalAdjustment` | Controls splat sharpness. The default favours image quality. |
 
-Both scans are included in Git. The Gaussian scan is stored as
-`public/scans/table-gaussian.ply.gz` (about 28 MiB, lossless compression).
-`npm run dev` and `npm run build` automatically unpack it to the ignored
-`table-gaussian.ply` before starting. No Git LFS or separate download is needed.
-Existing local PLY files are preserved. To adopt a newer archive after pulling,
-move your old PLY aside and run `node scripts/prepare-scans.mjs` again.
-The archive contains the cleaned display copy used by this viewer, not the
-untouched Scaniverse export in the original owner's Downloads folder.
+The contents of `public/scans/` are Git-ignored except for its setup guide.
+Supply scan files separately on each frontend laptop. You may optionally
+provide `public/scans/table-gaussian.ply.gz`; `npm run dev` and `npm run build`
+unpack it into `table-gaussian.ply` if the raw file is absent. No archive means
+this preparation step is skipped. Existing local PLY files are preserved;
+move an old PLY aside before unpacking a replacement archive.
+
+See the [scan setup guide](public/scans/README.md) for formats and paths.
+Back up tracked scans outside your checkout before pulling the removal commit,
+then restore them locally. Earlier Git history still contains the old assets.
+Git-ignored scans are still publicly served by Vite and copied into builds if
+present, so keep sensitive originals outside `public/`.
 
 When running the frontend on another laptop, set `VITE_CAM1_HOST` and
 `VITE_CAM2_HOST` in its `.env` to the laptops running `cv/producer.py`, including
